@@ -59,28 +59,34 @@ func ParseFlags() {
 //  goroutines.
 type GoQueue struct {
     // The maximum number of goroutines can be changed while the queue is
-    // processing. It is advisable, although probably not necessary, that
-    // one do this using the "sync/atomic" package.
+    // processing.
     MaxGo      int
 
-    waitingToRun bool        // Goroutine is ready, waiting for another to finish.
-    nextWake     chan bool   // Begin the routine that set waitingToRun
+    // Handle waiting when the limit of concurrent goroutines has been reached.
+    waitingToRun bool
+    nextWake     chan bool
 
-    // Wait for 
-    waitingOnQ   bool        // The Start() method is waiting for an Equeue()
-    restart      chan bool   // Begin the Start() method that set waitingOnQ
+    // Handle waiting when function queue is empty.
+    waitingOnQ   bool
+    restart      chan bool
 
     // Manage the Start()'ing of a GoQueue, avoiding race conditions.
     startLock    *sync.Mutex
-    started      bool        // The Start() method is currently executing.
+    started      bool
 
-    kill         chan bool   // Pre-emptively halt the stop method.
+    // Handle goroutine-safe queue operations.
+    qLock        *sync.Mutex
+    waiting      *list.List  // A list with values of type func(int)
+
+    // Handle goroutine-safe limiting and identifier operations.
+    pLock        *sync.Mutex
     processing   int         // Number of QueueTasks running
-    qLock        *sync.Mutex // Lock the queue and the waitingOnQ flag.
-    pLock        *sync.Mutex // Lock the process counter
-    waiting      *list.List  // Waiting processes
     idcount      int64       // pid counter
+
+    // Handle stopping of the Start() method.
+    kill         chan bool
 }
+
 //  Create a new *GoQueue object with a specified number of simultaneous
 //  goroutines.
 func NewGoQueue(maxgo int) *GoQueue {
@@ -144,6 +150,7 @@ func (gq *GoQueue) Enqueue(f func(int64)) int64 {
 
     return id
 }
+
 //  Stop the queue after gq.Start() has been called. This will keep any
 //  goroutines which have not already begun from starting. The queue can
 //  be started again later.
@@ -168,6 +175,7 @@ func (gq *GoQueue) Stop() {
     close(gq.kill)
     close(gq.nextWake)
 }
+
 //  Start the next GoQueueTask in the queue. It's assumed that the queue
 //  is non empty. Furthermore, there should only be one goroutine in this
 //  method (for this object) at a time. Both conditions are enforced in
