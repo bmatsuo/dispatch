@@ -56,10 +56,7 @@ func ParseFlags() {
 }
 
 type GoQueue struct {
-    //BaseWait     int64
     MaxProc      int
-    //waittime     int64
-    //maxwait      int64
     waitingToRun bool
     waitingOnQ   bool
     started      bool
@@ -83,9 +80,6 @@ func NewGoQueue() *GoQueue {
     rl.nextWake  = make(chan bool)
     rl.waiting   = list.New()
     rl.MaxProc   = 20
-    //rl.BaseWait  = 10
-    //rl.waittime  = rl.BaseWait
-    //rl.maxwait   = 500e6
     rl.idcount   = 0
     return rl
 }
@@ -149,17 +143,6 @@ func (gq *GoQueue) Stop() {
     gq.qLock.Unlock()
     gq.startLock.Unlock()
 }
-/*
-func (gq *GoQueue) mustWait() {
-    gq.waittime <<= 2
-    if gq.waittime > gq.maxwait {
-        gq.waittime = gq.maxwait
-    }
-}
-func (gq *GoQueue) wait() {
-    time.Sleep(gq.waittime)
-}
-*/
 func (gq *GoQueue) next() {
     for true {
         // Attempt to start processing the file.
@@ -167,9 +150,7 @@ func (gq *GoQueue) next() {
         if gq.processing >= gq.MaxProc {
             // Too many threads, wait and try again.
             gq.waitingToRun = true
-            //gq.mustWait()
             gq.pLock.Unlock()
-            //gq.wait()
             var cont, ok =<-gq.nextWake
             if !ok {
                 gq.nextWake = make(chan bool)
@@ -183,7 +164,6 @@ func (gq *GoQueue) next() {
         // Keep the books and reset wait time before unlocking.
         gq.waitingToRun = false
         gq.processing++
-        //gq.waittime = gq.BaseWait
         gq.pLock.Unlock()
 
         // Get an element from the queue.
