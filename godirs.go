@@ -151,21 +151,19 @@ func (gq *GoQueue) Enqueue(f GQTask) int64 {
     return id
 }
 
-//  Stop the queue after gq.Start() has been called. This will keep any
-//  goroutines which have not already begun from starting. The queue can
-//  be started again later.
+//  Stop the queue after gq.Start() has been called. Any goroutines which
+//  have not already been dequeued will not be executed until gq.Start()
+//  is called again.
 func (gq *GoQueue) Stop() {
-    // Lock out Start() for the entire call.
+    // Lock out Start() and queue ops for the entire call.
     gq.startLock.Lock()
     defer gq.startLock.Unlock()
+    gq.qLock.Lock()
+    defer gq.qLock.Unlock()
 
     if !gq.started {
         return
     }
-
-    // Lock any queue operations for the remainder of the call.
-    gq.qLock.Lock()
-    defer gq.qLock.Unlock()
 
     // Clear channel flags and close channels, stoping further processing.
     gq.started = false
