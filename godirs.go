@@ -56,20 +56,22 @@ func ParseFlags() {
 }
 
 type GoQueue struct {
-    BaseWait   int64
-    MaxProc    int
-    waittime   int64
-    maxwait    int64
-    waitingOnQ bool
-    started    bool
-    restart    chan bool
-    kill       chan bool
-    processing int             // Number of QueueTasks running
-    startLock  *sync.Mutex     // Keep Start() race free.
-    qLock      *sync.Mutex     // Lock the queue and the waitingOnQ flag.
-    pLock      *sync.Mutex     // Lock the process counter
-    waiting    *list.List      // Waiting processes
-    idcount    int             // pid counter
+    //BaseWait     int64
+    MaxProc      int
+    //waittime     int64
+    //maxwait      int64
+    waitingToRun bool
+    waitingOnQ   bool
+    started      bool
+    nextWake     chan bool
+    restart      chan bool
+    kill         chan bool
+    processing   int             // Number of QueueTasks running
+    startLock    *sync.Mutex     // Keep Start() race free.
+    qLock        *sync.Mutex     // Lock the queue and the waitingOnQ flag.
+    pLock        *sync.Mutex     // Lock the process counter
+    waiting      *list.List      // Waiting processes
+    idcount      int64           // pid counter
 }
 func NewGoQueue() *GoQueue {
     var rl = new(GoQueue)
@@ -78,38 +80,58 @@ func NewGoQueue() *GoQueue {
     rl.pLock     = new(sync.Mutex)
     rl.restart   = make(chan bool)
     rl.kill      = make(chan bool)
+    rl.nextWake  = make(chan bool)
     rl.waiting   = list.New()
     rl.MaxProc   = 20
-    rl.BaseWait  = 10
-    rl.waittime  = rl.BaseWait
-    rl.maxwait   = 500e6
+    //rl.BaseWait  = 10
+    //rl.waittime  = rl.BaseWait
+    //rl.maxwait   = 500e6
     rl.idcount   = 0
     return rl
 }
 
+//  Goroutines called from a GoQueue are given an int identifier unique
+//  to that routine.
 type GoQueueTask struct {
-    id int
-    f  func(int)
+    id int64
+    f  func(int64)
 }
-func (gq *GoQueue) Enqueue(f func(int)) int {
+func (gq *GoQueue) Enqueue(f func(int64)) int64 {
+    // Wrap the function so it works with the goroutine limiting code.
+    var gqtFunc = func (id int64) {
+        f(id)
+
+        // Decrement the process counter.
+        gq.pLock.Lock()
+        gq.processing--
+        var procWaiting = gq.waitingToRun
+        if procWaiting {
+            gq.waitingToRun = false
+        }
+        gq.pLock.Unlock()
+
+        // Start any waiting process.
+        if procWaiting {
+            gq.nextWake<-true
+        }
+    }
+
+    // Lock the queue and enqueue a new task.
     gq.qLock.Lock()
     gq.idcount++
-    var (
-        id = gq.idcount
-    )
-    gq.waiting.PushBack(GoQueueTask{
-        id,
-        func (id int) {
-            f(id)
-            gq.pLock.Lock()
-            gq.processing--
-            gq.pLock.Unlock()
-        }})
-    if gq.waitingOnQ {
-        gq.restart<-true
+    var id = gq.idcount
+    gq.waiting.PushBack(GoQueueTask{id, gqtFunc})
+    var loopWaiting = gq.waitingOnQ
+    if loopWaiting {
         gq.waitingOnQ = false
     }
     gq.qLock.Unlock()
+
+    // Restart the Start() loop if it was deemed necessary.
+    if loopWaiting {
+        gq.restart<-true
+    }
+
     return id
 }
 func (gq *GoQueue) Stop() {
@@ -119,11 +141,15 @@ func (gq *GoQueue) Stop() {
         return
     }
     gq.qLock.Lock()
+    gq.waitingToRun = false
     gq.waitingOnQ = false
     close(gq.restart)
+    close(gq.kill)
+    close(gq.nextWake)
     gq.qLock.Unlock()
     gq.startLock.Unlock()
 }
+/*
 func (gq *GoQueue) mustWait() {
     gq.waittime <<= 2
     if gq.waittime > gq.maxwait {
@@ -133,20 +159,31 @@ func (gq *GoQueue) mustWait() {
 func (gq *GoQueue) wait() {
     time.Sleep(gq.waittime)
 }
+*/
 func (gq *GoQueue) next() {
     for true {
         // Attempt to start processing the file.
         gq.pLock.Lock()
         if gq.processing >= gq.MaxProc {
             // Too many threads, wait and try again.
-            gq.mustWait()
+            gq.waitingToRun = true
+            //gq.mustWait()
             gq.pLock.Unlock()
-            gq.wait()
+            //gq.wait()
+            var cont, ok =<-gq.nextWake
+            if !ok {
+                gq.nextWake = make(chan bool)
+                return
+            }
+            if !cont {
+                return
+            }
             continue
         }
         // Keep the books and reset wait time before unlocking.
+        gq.waitingToRun = false
         gq.processing++
-        gq.waittime = gq.BaseWait
+        //gq.waittime = gq.BaseWait
         gq.pLock.Unlock()
 
         // Get an element from the queue.
@@ -209,6 +246,7 @@ func (gq *GoQueue) Start() {
         }
     }
 }
+
 type Walker struct {
     gq  *GoQueue
     done   chan bool
@@ -228,7 +266,7 @@ func NewWalker() *Walker {
     return w
 }
 func (w *Walker) VisitFile(path string, info *os.FileInfo) {
-    var f = func (id int) {
+    var f = func (id int64) {
         var stat, err = os.Stat(path)
         if err != nil {
             panic(err)
