@@ -104,7 +104,7 @@ type GoQueueTask struct {
     f  func(int64)
 }
 
-//  Encue a function for execution as a goroutine.
+//  Enqueue a function for execution as a goroutine.
 func (gq *GoQueue) Enqueue(f func(int64)) int64 {
     // Wrap the function so it works with the goroutine limiting code.
     var gqtFunc = func (id int64) {
