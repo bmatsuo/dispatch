@@ -55,22 +55,35 @@ func ParseFlags() {
     }
 }
 
+//  A GoQueue is a function queue that allows limiting number of concurrent
+//  goroutines.
 type GoQueue struct {
-    MaxProc      int
-    waitingToRun bool
-    waitingOnQ   bool
-    started      bool
-    nextWake     chan bool
-    restart      chan bool
-    kill         chan bool
-    processing   int             // Number of QueueTasks running
-    startLock    *sync.Mutex     // Keep Start() race free.
-    qLock        *sync.Mutex     // Lock the queue and the waitingOnQ flag.
-    pLock        *sync.Mutex     // Lock the process counter
-    waiting      *list.List      // Waiting processes
-    idcount      int64           // pid counter
+    // The maximum number of goroutines can be changed while the queue is
+    // processing. It is advisable, although probably not necessary, that
+    // one do this using the "sync/atomic" package.
+    MaxGo      int
+
+    waitingToRun bool        // Goroutine is ready, waiting for another to finish.
+    nextWake     chan bool   // Begin the routine that set waitingToRun
+
+    // Wait for 
+    waitingOnQ   bool        // The Start() method is waiting for an Equeue()
+    restart      chan bool   // Begin the Start() method that set waitingOnQ
+
+    // Manage the Start()'ing of a GoQueue, avoiding race conditions.
+    startLock    *sync.Mutex
+    started      bool        // The Start() method is currently executing.
+
+    kill         chan bool   // Pre-emptively halt the stop method.
+    processing   int         // Number of QueueTasks running
+    qLock        *sync.Mutex // Lock the queue and the waitingOnQ flag.
+    pLock        *sync.Mutex // Lock the process counter
+    waiting      *list.List  // Waiting processes
+    idcount      int64       // pid counter
 }
-func NewGoQueue() *GoQueue {
+//  Create a new *GoQueue object with a specified number of simultaneous
+//  goroutines.
+func NewGoQueue(maxgo int) *GoQueue {
     var rl = new(GoQueue)
     rl.startLock = new(sync.Mutex)
     rl.qLock     = new(sync.Mutex)
@@ -79,7 +92,7 @@ func NewGoQueue() *GoQueue {
     rl.kill      = make(chan bool)
     rl.nextWake  = make(chan bool)
     rl.waiting   = list.New()
-    rl.MaxProc   = 20
+    rl.MaxGo     = maxgo
     rl.idcount   = 0
     return rl
 }
@@ -90,9 +103,12 @@ type GoQueueTask struct {
     id int64
     f  func(int64)
 }
+
+//  Encue a function for execution as a goroutine.
 func (gq *GoQueue) Enqueue(f func(int64)) int64 {
     // Wrap the function so it works with the goroutine limiting code.
     var gqtFunc = func (id int64) {
+        // Run the given function.
         f(id)
 
         // Decrement the process counter.
@@ -128,26 +144,39 @@ func (gq *GoQueue) Enqueue(f func(int64)) int64 {
 
     return id
 }
+//  Stop the queue after gq.Start() has been called. This will keep any
+//  goroutines which have not already begun from starting. The queue can
+//  be started again later.
 func (gq *GoQueue) Stop() {
+    // Lock out Start() for the entire call.
     gq.startLock.Lock()
+    defer gq.startLock.Unlock()
+
     if !gq.started {
-        gq.startLock.Unlock()
         return
     }
+
+    // Lock any queue operations for the remainder of the call.
     gq.qLock.Lock()
+    defer gq.qLock.Unlock()
+
+    // Clear channel flags and close channels, stoping further processing.
+    gq.started = false
     gq.waitingToRun = false
     gq.waitingOnQ = false
     close(gq.restart)
     close(gq.kill)
     close(gq.nextWake)
-    gq.qLock.Unlock()
-    gq.startLock.Unlock()
 }
+//  Start the next GoQueueTask in the queue. It's assumed that the queue
+//  is non empty. Furthermore, there should only be one goroutine in this
+//  method (for this object) at a time. Both conditions are enforced in
+//  gq.Start(), which calls gq.next() exclusively.
 func (gq *GoQueue) next() {
     for true {
         // Attempt to start processing the file.
         gq.pLock.Lock()
-        if gq.processing >= gq.MaxProc {
+        if gq.processing >= gq.MaxGo {
             // Too many threads, wait and try again.
             gq.waitingToRun = true
             gq.pLock.Unlock()
@@ -178,28 +207,46 @@ func (gq *GoQueue) next() {
         return
     }
 }
+
+//  Start executing goroutines. Don't stop until gq.Stop() is called.
 func (gq *GoQueue) Start() {
+    // Avoid multiple gq.Start() methods and avoid race conditions.
     gq.startLock.Lock()
     if gq.started {
         panic("already started")
     }
-    select {
-    case _, okKill :=<-gq.kill:
-        if !okKill {
-            gq.kill = make(chan bool)
-        }
-    case _, okRestart :=<-gq.restart:
-        if !okRestart {
-            gq.restart = make(chan bool)
-        }
-    default:
-    }
     gq.started = true
     gq.startLock.Unlock()
+
+
+    // Recreate any channels that were closed by a previous Stop().
+    var inited = false
+    for !inited {
+        select {
+        case _, okKill :=<-gq.kill:
+            if !okKill {
+                gq.kill = make(chan bool)
+            }
+        case _, okRestart :=<-gq.restart:
+            if !okRestart {
+                gq.restart = make(chan bool)
+            }
+        case _, okWake :=<-gq.nextWake:
+            if !okWake {
+                gq.restart = make(chan bool)
+            }
+        default:
+            inited = true
+        }
+    }
+
+    // Process the queue
     for true {
         select {
         case die, ok :=<-gq.kill:
+            // If something came out of this channel, we must stop.
             if !ok {
+                // Recreate the channel on a closure.
                 gq.kill = make(chan bool)
                 return
             }
@@ -207,14 +254,18 @@ func (gq *GoQueue) Start() {
                 return
             }
         default:
+            // Check the queue size and determine if we need to wait.
             gq.qLock.Lock()
             gq.waitingOnQ = gq.waiting.Len() == 0
             gq.qLock.Unlock()
 
             if !gq.waitingOnQ {
+                // Process the head of the queue and start the loop again.
                 gq.next()
                 continue
             }
+
+            // Wait for a restart signal from gq.Enqueue
             var cont, ok =<-gq.restart
             if !ok {
                 gq.restart = make(chan bool)
@@ -237,7 +288,7 @@ type Walker struct {
 }
 func NewWalker() *Walker {
     var w    = new(Walker)
-    w.gq     = NewGoQueue()
+    w.gq     = NewGoQueue(20)
     w.lock   = new(sync.Mutex)
     w.wg     = new(sync.WaitGroup)
     w.done   = make(chan bool)
