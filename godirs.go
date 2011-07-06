@@ -87,9 +87,8 @@ type GoQueue struct {
     kill         chan bool
 }
 
-//  Create a new *GoQueue object with a specified number of simultaneous
-//  goroutines.
-func NewGoQueue(maxgo int) *GoQueue {
+//  Create a new queue object with a specified limit on concurrency.
+func NewGoQueue(maxroutines int) *GoQueue {
     var rl = new(GoQueue)
     rl.startLock = new(sync.Mutex)
     rl.qLock     = new(sync.Mutex)
@@ -98,20 +97,21 @@ func NewGoQueue(maxgo int) *GoQueue {
     rl.kill      = make(chan bool)
     rl.nextWake  = make(chan bool)
     rl.waiting   = list.New()
-    rl.MaxGo     = maxgo
+    rl.MaxGo     = maxroutines
     rl.idcount   = 0
     return rl
 }
 
 //  Goroutines called from a GoQueue are given an int identifier unique
 //  to that routine.
-type GoQueueTask struct {
+type GQTask func(id int64)
+type goQueueTask struct {
     id int64
-    f  func(int64)
+    f  GQTask
 }
 
-//  Enqueue a function for execution as a goroutine.
-func (gq *GoQueue) Enqueue(f func(int64)) int64 {
+//  Enqueue a task for execution as a goroutine.
+func (gq *GoQueue) Enqueue(f GQTask) int64 {
     // Wrap the function so it works with the goroutine limiting code.
     var gqtFunc = func (id int64) {
         // Run the given function.
@@ -136,7 +136,7 @@ func (gq *GoQueue) Enqueue(f func(int64)) int64 {
     gq.qLock.Lock()
     gq.idcount++
     var id = gq.idcount
-    gq.waiting.PushBack(GoQueueTask{id, gqtFunc})
+    gq.waiting.PushBack(goQueueTask{id, gqtFunc})
     var loopWaiting = gq.waitingOnQ
     if loopWaiting {
         gq.waitingOnQ = false
@@ -176,9 +176,9 @@ func (gq *GoQueue) Stop() {
     close(gq.nextWake)
 }
 
-//  Start the next GoQueueTask in the queue. It's assumed that the queue
-//  is non empty. Furthermore, there should only be one goroutine in this
-//  method (for this object) at a time. Both conditions are enforced in
+//  Start the next task in the queue. It's assumed that the queue is non-
+//  empty. Furthermore, there should only be one goroutine in this method
+//  (for this object) at a time. Both conditions are enforced in
 //  gq.Start(), which calls gq.next() exclusively.
 func (gq *GoQueue) next() {
     for true {
@@ -210,7 +210,7 @@ func (gq *GoQueue) next() {
         gq.qLock.Unlock()
 
         // Begin processing and asyncronously return.
-        var task = taskelm.Value.(GoQueueTask)
+        var task = taskelm.Value.(goQueueTask)
         go task.f(task.id)
         return
     }
