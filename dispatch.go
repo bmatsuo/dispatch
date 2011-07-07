@@ -33,7 +33,8 @@ type Dispatch struct {
 
     // Handle waiting when the limit of concurrent goroutines has been reached.
     waitingToRun bool
-    nextWake     chan bool
+    //nextWake     chan bool
+    nextWait     *sync.WaitGroup
 
     // Handle waiting when function queue is empty.
     waitingOnQ   bool
@@ -67,7 +68,8 @@ func NewCustom(maxroutines int, queue queues.Queue) *Dispatch {
     rl.pLock     = new(sync.Mutex)
     rl.restart   = new(sync.WaitGroup)
     rl.kill      = make(chan bool)
-    rl.nextWake  = make(chan bool)
+    //rl.nextWake  = make(chan bool)
+    rl.nextWait  = new(sync.WaitGroup)
     rl.queue     = queue
     rl.MaxGo     = maxroutines
     rl.idcount   = 0
@@ -121,7 +123,8 @@ func (gq *Dispatch) Enqueue(t queues.Task) int64 {
 
         // Start any waiting process.
         if procWaiting {
-            gq.nextWake<-true
+            //gq.nextWake<-true
+            gq.nextWait.Done()
         }
     }
     t.SetFunc(dtFunc)
@@ -162,12 +165,15 @@ func (gq *Dispatch) Stop() {
     // Clear channel flags and close channels, stoping further processing.
     close(gq.kill)
     gq.started = false
-    gq.waitingToRun = false
     if gq.waitingOnQ {
         gq.waitingOnQ = false
         gq.restart.Done()
     }
-    close(gq.nextWake)
+    if gq.waitingToRun {
+        gq.waitingToRun = false
+        gq.nextWait.Done()
+    }
+    //close(gq.nextWake)
 }
 
 //  Start the next task in the queue. It's assumed that the queue is non-
@@ -180,7 +186,10 @@ func (gq *Dispatch) next() {
         gq.pLock.Lock()
         if gq.processing >= gq.MaxGo {
             gq.waitingToRun = true
+            gq.nextWait.Add(1)
             gq.pLock.Unlock()
+            gq.nextWait.Wait()
+            /*
             var cont, ok =<-gq.nextWake
             if !ok {
                 gq.nextWake = make(chan bool)
@@ -189,6 +198,7 @@ func (gq *Dispatch) next() {
             if !cont {
                 return
             }
+            */
             continue
         }
         // Keep the books and reset wait time before unlocking.
@@ -228,10 +238,12 @@ func (gq *Dispatch) Start() {
             if !okKill {
                 gq.kill = make(chan bool)
             }
+        /*
         case _, okWake :=<-gq.nextWake:
             if !okWake {
                 gq.nextWake = make(chan bool)
             }
+        */
         default:
             inited = true
         }
@@ -258,12 +270,12 @@ func (gq *Dispatch) Start() {
             }
             gq.qLock.Unlock()
 
-            if !gq.waitingOnQ {
-                // Process the head of the queue and start the loop again.
-                gq.next()
-            } else {
+            if gq.waitingOnQ {
                 // Wait for a restart signal from gq.Enqueue
                 gq.restart.Wait()
+            } else {
+                // Process the head of the queue and start the loop again.
+                gq.next()
             }
         }
     }
