@@ -20,6 +20,9 @@ type PTask struct {
     F func(int64)
     P float64
 }
+func (pt PTask) Type() string {
+    return "PTask"
+}
 func (pt PTask) Func() func(int64) {
     return pt.F
 }
@@ -108,7 +111,7 @@ func (pq *PriorityQueue) Enqueue(task RegisteredTask) {
     case PrioritizedTask:
         heap.Push(pq.h, task)
     default:
-        panic(fmt.Sprintf("nokey %v", task.Task()))
+        panic(fmt.Sprintf("nokey %s", task.Task().Type()))
     }
 }
 func (pq *PriorityQueue) SetKey(id int64, k float64) {

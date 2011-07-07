@@ -19,6 +19,7 @@ import (
 //  A Task is the interface satisfied by objects passed to a Dispatch.
 type Task interface {
     Func() func (id int64)
+    Type() string                 // Used mostly for debugging
 }
 //  A Task given to a Dispatch is given a unique id and becomes a
 //  RegisteredTask.

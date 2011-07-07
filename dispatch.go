@@ -79,6 +79,9 @@ func NewCustom(maxroutines int, queue queues.Queue) *Dispatch {
 type StdTask struct {
     F func(id int64)
 }
+func (dt StdTask) Type() string {
+    return "StdTask"
+}
 func (dt StdTask) Func() func(id int64) {
     return dt.F
 }
