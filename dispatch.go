@@ -141,7 +141,7 @@ func (gq *Dispatch) Enqueue(t queues.Task) int64 {
 
     // Restart the Start() loop if it was deemed necessary.
     if loopWaiting {
-        gq.restart<-true
+        //gq.restart<-true
         gq.restartwg.Done()
     }
 
@@ -271,8 +271,9 @@ func (gq *Dispatch) Start() {
                 continue
             }
 
-            //gq.restartwg.Wait()
+            gq.restartwg.Wait()
             // Wait for a restart signal from gq.Enqueue
+            /*
             var cont, ok =<-gq.restart
             if !ok {
                 gq.restart = make(chan bool)
@@ -281,6 +282,7 @@ func (gq *Dispatch) Start() {
             if !cont {
                 return
             }
+            */
         }
     }
 }
