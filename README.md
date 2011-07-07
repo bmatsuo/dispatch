@@ -67,7 +67,13 @@ Or alternatively, use a godoc http server
 
     godoc -http=:6060
 
-and view the url http://localhost:6060/pkg/github.com/bmatsuo/dispatch
+Then, visit the following URLs for complete dispatch documentation
+
+* http://localhost:6060/pkg/github.com/bmatsuo/dispatch
+
+* http://localhost:6060/pkg/github.com/bmatsuo/dispatch/queues
+
+* http://localhost:6060/pkg/github.com/bmatsuo/dispatch/examples
 
 Author
 ======
