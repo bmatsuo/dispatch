@@ -43,7 +43,7 @@ type Dispatch struct {
 
     // Handle goroutine-safe queue operations.
     qLock        *sync.Mutex
-    queue        Queue
+    queue        queues.Queue
 
     // Handle goroutine-safe limiting and identifier operations.
     pLock        *sync.Mutex
@@ -56,9 +56,9 @@ type Dispatch struct {
 
 //  Create a new queue object with a specified limit on concurrency.
 func New(maxroutines int) *Dispatch {
-    return NewCustom(maxroutines, NewFIFO())
+    return NewCustom(maxroutines, queues.NewFIFO())
 }
-func NewCustom(maxroutines int, queue Queue) *Dispatch {
+func NewCustom(maxroutines int, queue queues.Queue) *Dispatch {
     var rl = new(Dispatch)
     rl.startLock = new(sync.Mutex)
     rl.qLock     = new(sync.Mutex)
@@ -82,7 +82,7 @@ func (dt StdTask) Func() func(id int64) {
 }
 type dispatchTaskWrapper struct {
     id int64
-    t  Task
+    t  queues.Task
 }
 func (dtw dispatchTaskWrapper) Func() func(id int64) {
     return dtw.t.Func()
@@ -90,12 +90,12 @@ func (dtw dispatchTaskWrapper) Func() func(id int64) {
 func (dtw dispatchTaskWrapper) Id() int64 {
     return dtw.id
 }
-func (dtw dispatchTaskWrapper) Task() Task {
+func (dtw dispatchTaskWrapper) Task() queues.Task {
     return dtw.t
 }
 
 //  Enqueue a task for execution as a goroutine.
-func (gq *Dispatch) Enqueue(t Task) int64 {
+func (gq *Dispatch) Enqueue(t queues.Task) int64 {
     // Wrap the function so it works with the goroutine limiting code.
     var f = t.Func()
     var dtFunc = func (id int64) {
@@ -188,7 +188,7 @@ func (gq *Dispatch) next() {
 
         // Get an element from the queue.
         gq.qLock.Lock()
-        var wrapper = gq.queue.Dequeue().(RegisteredTask)
+        var wrapper = gq.queue.Dequeue().(queues.RegisteredTask)
         gq.qLock.Unlock()
 
         // Begin processing and asyncronously return.
