@@ -18,6 +18,7 @@ import (
 
 //  A Task is the interface satisfied by objects passed to a Dispatch.
 type Task interface {
+    SetFunc(func (id int64))
     Func() func (id int64)
     Type() string                 // Used mostly for debugging
 }

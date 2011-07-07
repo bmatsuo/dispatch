@@ -82,6 +82,9 @@ type StdTask struct {
 func (dt StdTask) Type() string {
     return "StdTask"
 }
+func (dt StdTask) SetFunc(f func(id int64)) {
+    dt.F = f
+}
 func (dt StdTask) Func() func(id int64) {
     return dt.F
 }
@@ -121,7 +124,7 @@ func (gq *Dispatch) Enqueue(t queues.Task) int64 {
             gq.nextWake<-true
         }
     }
-    var dt = StdTask{dtFunc}
+    var dt = t.SetFunc(dtFunc)
 
     // Lock the queue and enqueue a new task.
     gq.qLock.Lock()
