@@ -11,15 +11,7 @@ package dispatch
  *  Usage:       godirs [options] ARGUMENT ...
  */
 import (
-    //"os"
-    //"fmt"
-    //"flag"
     "sync"
-    //"time"
-    //"log"
-    //"strings"
-    //"path/filepath"
-    //"container/list"
 )
 
 //  A Task is the interface satisfied by objects passed to a Dispatch.
