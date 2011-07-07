@@ -65,7 +65,7 @@ func (h *pQueue) Swap(i, j int) {
     h.elements[j] = tmp
 }
 func (h *pQueue) Push(x interface{}) {
-    switch x.(type) {
+    switch x.(RegisteredTask).Task().(type) {
     case PrioritizedTask:
         h.elements = append(h.elements, x.(RegisteredTask))
     default:
