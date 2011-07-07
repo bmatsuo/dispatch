@@ -38,6 +38,7 @@ type Dispatch struct {
     // Handle waiting when function queue is empty.
     waitingOnQ   bool
     restart      chan bool
+    restartwg    *sync.WaitGroup
 
     // Manage the Start()'ing of a Dispatch, avoiding race conditions.
     startLock    *sync.Mutex
@@ -66,6 +67,7 @@ func NewCustom(maxroutines int, queue queues.Queue) *Dispatch {
     rl.qLock     = new(sync.Mutex)
     rl.pLock     = new(sync.Mutex)
     rl.restart   = make(chan bool)
+    rl.restartwg = new(sync.WaitGroup)
     rl.kill      = make(chan bool)
     rl.nextWake  = make(chan bool)
     rl.queue     = queue
@@ -140,6 +142,7 @@ func (gq *Dispatch) Enqueue(t queues.Task) int64 {
     // Restart the Start() loop if it was deemed necessary.
     if loopWaiting {
         gq.restart<-true
+        gq.restartwg.Done()
     }
 
     return id
@@ -160,11 +163,14 @@ func (gq *Dispatch) Stop() {
     }
 
     // Clear channel flags and close channels, stoping further processing.
+    close(gq.kill)
     gq.started = false
     gq.waitingToRun = false
-    gq.waitingOnQ = false
+    if gq.waitingOnQ {
+        gq.waitingOnQ = false
+        gq.restartwg.Done()
+    }
     close(gq.restart)
-    close(gq.kill)
     close(gq.nextWake)
 }
 
@@ -264,6 +270,7 @@ func (gq *Dispatch) Start() {
                 continue
             }
 
+            //gq.restartwg.Wait()
             // Wait for a restart signal from gq.Enqueue
             var cont, ok =<-gq.restart
             if !ok {
