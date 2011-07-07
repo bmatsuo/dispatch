@@ -8,8 +8,7 @@ About dispatch
 Package dispatch provides an object Dispatch which is a queueing system for
 concurrent functions. It implements a dynamic limit on the number of
 routines it is runs simultaneously. It also implements an interface Queue,
-allowing for alternate queue implementations (I''m working on some new
-implementations).
+allowing for alternate queue implementations.
 
 Dependencies
 =============
