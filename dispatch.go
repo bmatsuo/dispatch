@@ -115,17 +115,11 @@ func (gq *Dispatch) Enqueue(t queues.Task) int64 {
         // Decrement the process counter.
         gq.pLock.Lock()
         gq.processing--
-        var procWaiting = gq.waitingToRun
-        if procWaiting {
+        if procWaiting := gq.waitingToRun ; procWaiting {
+            gq.nextWait.Done()
             gq.waitingToRun = false
         }
         gq.pLock.Unlock()
-
-        // Start any waiting process.
-        if procWaiting {
-            //gq.nextWake<-true
-            gq.nextWait.Done()
-        }
     }
     t.SetFunc(dtFunc)
 
