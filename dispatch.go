@@ -128,16 +128,11 @@ func (gq *Dispatch) Enqueue(t queues.Task) int64 {
     gq.idcount++
     var id = gq.idcount
     gq.queue.Enqueue(dispatchTaskWrapper{id, t})
-    var loopWaiting = gq.waitingOnQ
-    if loopWaiting {
+    if gq.waitingOnQ {
         gq.waitingOnQ = false
-    }
-    gq.qLock.Unlock()
-
-    // Restart the Start() loop if it was deemed necessary.
-    if loopWaiting {
         gq.restart.Done()
     }
+    gq.qLock.Unlock()
 
     return id
 }
@@ -258,12 +253,13 @@ func (gq *Dispatch) Start() {
         default:
             // Check the queue size and determine if we need to wait.
             gq.qLock.Lock()
-            if gq.waitingOnQ = gq.queue.Len() == 0 ; gq.waitingOnQ {
+            var wait = gq.queue.Len() == 0
+            if gq.waitingOnQ = wait ; wait {
                 gq.restart.Add(1)
             }
             gq.qLock.Unlock()
 
-            if gq.waitingOnQ {
+            if wait {
                 // Wait for a restart signal from gq.Enqueue
                 gq.restart.Wait()
             } else {
