@@ -124,13 +124,13 @@ func (gq *Dispatch) Enqueue(t queues.Task) int64 {
             gq.nextWake<-true
         }
     }
-    var dt = t.SetFunc(dtFunc)
+    t.SetFunc(dtFunc)
 
     // Lock the queue and enqueue a new task.
     gq.qLock.Lock()
     gq.idcount++
     var id = gq.idcount
-    gq.queue.Enqueue(dispatchTaskWrapper{id, dt})
+    gq.queue.Enqueue(dispatchTaskWrapper{id, t})
     var loopWaiting = gq.waitingOnQ
     if loopWaiting {
         gq.waitingOnQ = false
