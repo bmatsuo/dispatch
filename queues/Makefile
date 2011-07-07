@@ -10,5 +10,6 @@ include $(GOROOT)/src/Make.inc
 TARG=queues
 GOFILES=\
 		queues.go\
+		priority.go\
 
 include $(GOROOT)/src/Make.pkg
