@@ -7,8 +7,11 @@
 
 include $(GOROOT)/src/Make.inc
 
-TARG=dispatch
+TARG=godu
 GOFILES=\
-        dispatch.go\
+        godu.go\
 
-include $(GOROOT)/src/Make.pkg
+include $(GOROOT)/src/Make.cmd
+
+test:
+	gotest
