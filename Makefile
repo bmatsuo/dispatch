@@ -13,3 +13,11 @@ GOFILES=\
         dispatch.go\
 
 include $(GOROOT)/src/Make.pkg
+
+exinstall: force
+	bash -c 'for ex in examples/*; do cd $$ex && gomake install && cd ../..; done'
+
+exnuke: force
+	bash -c 'for ex in examples/*; do cd $$ex && gomake nuke && cd ../..; done'
+
+force: ;

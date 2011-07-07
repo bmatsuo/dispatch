@@ -18,7 +18,7 @@ import (
     "time"
     //"log"
     //"strings"
-    "dispatch"
+    "github.com/bmatsuo/dispatch"
     "path/filepath"
 )
 const (

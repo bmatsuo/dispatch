@@ -10,6 +10,20 @@ concurrent functions. It implements a dynamic limit on the number of
 routines it is runs simultaneously. It also implements an interface Queue,
 allowing for alternate queue implementations.
 
+Performance
+===========
+
+Generally, you run concurrent processes for increased program speed. So,
+you would like a dispatch method to be fast. However, the general purpose
+nature of the dispatch package causes some necessary bloating underlying
+the methods of Dispatch objects. For concurrent tasks which are doing 
+actual work for more than a few hundred nanoseconds, this should not be
+very noticeable.
+
+Hovever, if you have very high performance expectations, you may be better
+off writing your own lean and mean goroutine dispatcher that is suited for
+your individual purposes.
+
 Dependencies
 =============
 
@@ -22,7 +36,27 @@ Installation
 
 Use goinstall to install godirs
 
-    goinstall github.com/bmatsuo
+    goinstall github.com/bmatsuo/dispatch
+
+Examples
+--------
+
+You can usage examples by checking out the examples subdirectory. You can
+run the compile all the examples to run the locally with the following
+commands
+
+    cd $GOROOT/src/pkg/github.com/bmatsuo/dispatch
+    gomake exinstall
+
+This installs all the examples. So, you can for instance run ```godu```
+simply with the command
+
+    godu
+
+When you are done, remove the examples with the command
+
+    gomake exnuke
+
 
 General Documentation
 ---------------------
