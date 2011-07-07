@@ -32,6 +32,7 @@ type Queue interface {
     Enqueue(task RegisteredTask)  // Insert a DispatchTask
     Dequeue() RegisteredTask      // Remove the next task.
     Len() int                     // Number of items to be processed.
+    SetKey(int64, float64)        // Set a task's key (priority queues).
 }
 
 //  A simple linked-list First In First Out (FIFO) Queue.
@@ -59,6 +60,8 @@ func (dq *FIFO) Dequeue() RegisteredTask {
     dq.waiting.Remove(taskelm)
     return taskelm.Value.(RegisteredTask)
 }
+//  Does nothing. See Queue.
+func (dq *FIFO) SetKey(id int64, k float64) { }
 
 //  A simple linked-list Last In First Out (LIFO) Queue.
 type LIFO struct {
@@ -85,3 +88,5 @@ func (dq *LIFO) Dequeue() RegisteredTask {
     dq.waiting.Remove(taskelm)
     return taskelm.Value.(RegisteredTask)
 }
+//  Does nothing. See Queue.
+func (dq *LIFO) SetKey(id int64, k float64) { }
