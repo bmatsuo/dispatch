@@ -7,7 +7,7 @@
  */
 
 /*
-Godu is a simple port of Unix du using a FIFO dispatch and filepath.Walk.
+Godu is a simple clone of Unix du using a FIFO dispatch and filepath.Walk.
 
 Usage:
 
