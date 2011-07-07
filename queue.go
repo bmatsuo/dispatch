@@ -17,7 +17,7 @@ type Queue interface {
     Len() int                     // Number of items to be processed.
 }
 
-//  A simple linked-list FIFO satisfying the Queue interface.
+//  A simple linked-list First In First Out (FIFO) Queue.
 type FIFO struct {
     waiting      *list.List  // A list with values of type func(int)
 }
@@ -38,6 +38,32 @@ func (dq *FIFO) Enqueue(task RegisteredTask) {
 }
 //  See Queue.
 func (dq *FIFO) Dequeue() RegisteredTask {
+    var taskelm = dq.waiting.Front()
+    dq.waiting.Remove(taskelm)
+    return taskelm.Value.(RegisteredTask)
+}
+
+//  A simple linked-list Last In First Out (LIFO) Queue.
+type LIFO struct {
+    waiting      *list.List  // A list with values of type func(int)
+}
+//  Create a new LIFO.
+func NewLIFO() *LIFO {
+    var q = new(LIFO)
+    q.waiting = list.New()
+    return q
+}
+
+//  See Queue.
+func (dq *LIFO) Len() int {
+    return dq.waiting.Len()
+}
+//  See Queue.
+func (dq *LIFO) Enqueue(task RegisteredTask) {
+    dq.waiting.PushFront(task)
+}
+//  See Queue.
+func (dq *LIFO) Dequeue() RegisteredTask {
     var taskelm = dq.waiting.Front()
     dq.waiting.Remove(taskelm)
     return taskelm.Value.(RegisteredTask)
