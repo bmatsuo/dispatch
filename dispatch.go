@@ -202,7 +202,6 @@ func (gq *Dispatch) next() {
             continue
         }
         // Keep the books and reset wait time before unlocking.
-        gq.waitingToRun = false
         gq.processing++
         gq.pLock.Unlock()
 
