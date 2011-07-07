@@ -1,8 +1,6 @@
 // Copyright 2011, Bryan Matsuo. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
-package dispatch
 /*
  *  Filename:    godirs.go
  *  Author:      Bryan Matsuo <bmatsuo@soe.ucsc.edu>
@@ -10,6 +8,13 @@ package dispatch
  *  Description: 
  *  Usage:       godirs [options] ARGUMENT ...
  */
+
+//  Package dispatch provides goroutine dispatch and concurrency limiting.
+//  It provides an object Dispatch which is a queueing system for concurrent
+//  functions. It implements a dynamic limit on the number of routines it is
+//  runs simultaneously. It also implements an interface Queue, allowing for
+//  alternate queue implementations (I'm working on some new ones).
+package dispatch
 import (
     "sync"
 )
