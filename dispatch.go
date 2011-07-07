@@ -12,8 +12,10 @@
 //  Package dispatch provides goroutine dispatch and concurrency limiting.
 //  It provides an object Dispatch which is a queueing system for concurrent
 //  functions. It implements a dynamic limit on the number of routines that
-//  it runs simultaneously. It also implements an interface Queue, allowing
-//  for alternate queue implementations.
+//  it runs simultaneously. It also uses a Queue interface, allowing for
+//  alternate queue implementations.
+//
+//  See github.com/bmatsuo/dispatch/queues for more about the Queue interface.
 //
 //  See github.com/bmatsuo/dispatch/examples for usage examples.
 package dispatch

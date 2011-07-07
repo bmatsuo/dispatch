@@ -1,4 +1,6 @@
-package queues
+// Copyright 2011, Bryan Matsuo. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 /*
  *  Filename:    queue.go
  *  Package:     dispatch
@@ -6,6 +8,10 @@ package queues
  *  Created:     Wed Jul  6 17:30:20 PDT 2011
  *  Description: 
  */
+
+//  Package dispatch/queues defines the Queue interface used in the
+//  package dispatch, as well as several Queue implementations.
+package queues
 import (
     "container/list"
 )
