@@ -11,25 +11,43 @@ import (
 )
 
 type PrioritizedTask interface {
-    RegisteredTask
+    Task
     Key() float64
+    SetKey(float64)
 }
+type PTask struct {
+    F func(int)
+    P float64
+}
+func (pt PTask) Func() func(int) {
+    return pt.F
+}
+func (pt PTask) Key() float64 {
+    return pt.P
+}
+func (pt *PTask) SetKey(k float64) {
+    pt.P = k
+}
+
 type pQueue struct {
-    elements []PrioritizedTask
+    elements []RegisteredTask
 }
 func newPQueue() *pQueue {
     var h = new(pQueue)
-    h.elements = make([]PrioritizedTask, 0, 5)
+    h.elements = make([]RegisteredTask, 0, 5)
     return h
+}
+func (h *pQueue) GetPTask(i int) PrioritizedTask {
+    if n := len(h.elements) ; i < 0 || i >= n {
+        panic("badindex")
+    }
+    return h.elements[i].Task().(PrioritizedTask)
 }
 func (h *pQueue) Len() int {
     return len(h.elements)
 }
 func (h *pQueue) Less(i, j int) bool {
-    if n := len(h.elements) ; i < 0 || i >= n || j < 0 || j >= n {
-        panic("badindex")
-    }
-    return h.elements[i].Key() < h.elements[j].Key()
+    return h.GetPTask(i).Key() < h.GetPTask(j).Key()
 }
 func (h *pQueue) Swap(i, j int) {
     if n := len(h.elements) ; i < 0 || i >=n || j < 0 || j >= n {
@@ -42,7 +60,7 @@ func (h *pQueue) Swap(i, j int) {
 func (h *pQueue) Push(x interface{}) {
     switch x.(type) {
     case PrioritizedTask:
-        h.elements = append(h.elements, x.(PrioritizedTask))
+        h.elements = append(h.elements, x.(RegisteredTask))
     default:
         panic("badtype")
     }
@@ -54,6 +72,14 @@ func (h *pQueue) Pop() interface{} {
     var head = h.elements[0]
     h.elements = h.elements[1:]
     return head
+}
+func (h *pQueue) FindId(id int64) (int, RegisteredTask) {
+    for i, elm := range h.elements {
+        if elm.Id() == id {
+            return i, elm
+        }
+    }
+    return -1, nil
 }
 
 type PriorityQueue struct {
@@ -77,5 +103,19 @@ func (pq *PriorityQueue) Dequeue() RegisteredTask {
     return heap.Pop(pq.h).(RegisteredTask)
 }
 func (pq *PriorityQueue) Enqueue(task RegisteredTask) {
+    switch task.Task().(type) {
+    case PrioritizedTask:
+        heap.Push(pq.h, task)
+    default:
+        panic("nokey")
+    }
+}
+func (pq *PriorityQueue) SetKey(id int64, k float64) {
+    var i, task = pq.h.FindId(id)
+    if i < 0 {
+        return
+    }
+    heap.Remove(pq.h, i)
+    task.Task().(PrioritizedTask).SetKey(k)
     heap.Push(pq.h, task)
 }
