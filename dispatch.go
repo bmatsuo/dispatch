@@ -21,7 +21,7 @@
 package dispatch
 import (
     "sync"
-    "log"
+    //"log"
     "github.com/bmatsuo/dispatch/queues"
 )
 
@@ -115,7 +115,7 @@ func (gq *Dispatch) Enqueue(t queues.Task) int64 {
 
         // Decrement the process counter.
         gq.pLock.Lock()
-        log.Printf("processing: %d, waiting: %v", gq.processing, gq.waitingToRun)
+        //log.Printf("processing: %d, waiting: %v", gq.processing, gq.waitingToRun)
         gq.processing--
         if gq.waitingToRun {
             gq.waitingToRun = false
