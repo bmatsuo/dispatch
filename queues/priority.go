@@ -107,7 +107,7 @@ func (pq *PriorityQueue) Enqueue(task RegisteredTask) {
     case PrioritizedTask:
         heap.Push(pq.h, task)
     default:
-        panic("nokey")
+        panic(fmt.Sprintf("nokey %v", task))
     }
 }
 func (pq *PriorityQueue) SetKey(id int64, k float64) {
