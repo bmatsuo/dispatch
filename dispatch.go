@@ -115,9 +115,9 @@ func (gq *Dispatch) Enqueue(t queues.Task) int64 {
         // Decrement the process counter.
         gq.pLock.Lock()
         gq.processing--
-        if procWaiting := gq.waitingToRun ; procWaiting {
-            gq.nextWait.Done()
+        if gq.waitingToRun {
             gq.waitingToRun = false
+            gq.nextWait.Done()
         }
         gq.pLock.Unlock()
     }
@@ -265,6 +265,7 @@ func (gq *Dispatch) Start() {
             } else {
                 // Process the head of the queue and start the loop again.
                 gq.next()
+                continue
             }
         }
     }
