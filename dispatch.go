@@ -262,7 +262,9 @@ func (gq *Dispatch) Start() {
             // Check the queue size and determine if we need to wait.
             gq.qLock.Lock()
             gq.waitingOnQ = gq.queue.Len() == 0
-            gq.restartwg.Add(1)
+            if gq.waitingOnQ {
+                gq.restartwg.Add(1)
+            }
             gq.qLock.Unlock()
 
             if !gq.waitingOnQ {
