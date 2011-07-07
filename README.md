@@ -42,11 +42,9 @@ Examples
 --------
 
 You can usage examples by checking out the examples subdirectory. You can
-run the compile all the examples to run the locally with the following
-commands
+run the compile all the examples to run the locally with the command
 
-    cd $GOROOT/src/pkg/github.com/bmatsuo/dispatch
-    gomake exinstall
+    cd $GOROOT/src/pkg/github.com/bmatsuo/dispatch && gomake exinstall && cd -
 
 This installs all the examples. So, you can for instance run ```godu```
 simply with the command
@@ -55,7 +53,7 @@ simply with the command
 
 When you are done, remove the examples with the command
 
-    gomake exnuke
+    cd $GOROOT/src/pkg/github.com/bmatsuo/dispatch && gomake exnuke && cd -
 
 
 General Documentation
