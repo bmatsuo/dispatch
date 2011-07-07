@@ -7,9 +7,9 @@
 
 include $(GOROOT)/src/Make.inc
 
-TARG=dispatch
+TARG=queues
 GOFILES=\
-        dispatch.go\
+		queue.go\
 
 include $(GOROOT)/src/Make.pkg
 

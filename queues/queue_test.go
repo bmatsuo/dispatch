@@ -1,4 +1,4 @@
-package dispatch
+package queues
 /*
  *  Filename:    queue_test.go
  *  Author:      Bryan Matsuo <bmatsuo@soe.ucsc.edu>

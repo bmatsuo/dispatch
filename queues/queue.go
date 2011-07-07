@@ -1,4 +1,4 @@
-package dispatch
+package queues
 /*
  *  Filename:    queue.go
  *  Package:     dispatch
@@ -10,6 +10,17 @@ import (
     "container/list"
 )
 
+//  A Task is the interface satisfied by objects passed to a Dispatch.
+type Task interface {
+    Func() func (id int64)
+}
+//  A Task given to a Dispatch is given a unique id and becomes a
+//  RegisteredTask.
+type RegisteredTask interface {
+    Task() Task
+    Func() func (id int64)
+    Id()   int64
+}
 //  A Queue is a queue for RegisteredTasks, used by a Dispatch.
 type Queue interface {
     Enqueue(task RegisteredTask)  // Insert a DispatchTask
