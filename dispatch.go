@@ -37,8 +37,7 @@ type Dispatch struct {
 
     // Handle waiting when function queue is empty.
     waitingOnQ   bool
-    restart      chan bool
-    restartwg    *sync.WaitGroup
+    restart      *sync.WaitGroup
 
     // Manage the Start()'ing of a Dispatch, avoiding race conditions.
     startLock    *sync.Mutex
@@ -66,8 +65,7 @@ func NewCustom(maxroutines int, queue queues.Queue) *Dispatch {
     rl.startLock = new(sync.Mutex)
     rl.qLock     = new(sync.Mutex)
     rl.pLock     = new(sync.Mutex)
-    rl.restart   = make(chan bool)
-    rl.restartwg = new(sync.WaitGroup)
+    rl.restart   = new(sync.WaitGroup)
     rl.kill      = make(chan bool)
     rl.nextWake  = make(chan bool)
     rl.queue     = queue
@@ -141,8 +139,7 @@ func (gq *Dispatch) Enqueue(t queues.Task) int64 {
 
     // Restart the Start() loop if it was deemed necessary.
     if loopWaiting {
-        //gq.restart<-true
-        gq.restartwg.Done()
+        gq.restart.Done()
     }
 
     return id
@@ -168,9 +165,8 @@ func (gq *Dispatch) Stop() {
     gq.waitingToRun = false
     if gq.waitingOnQ {
         gq.waitingOnQ = false
-        gq.restartwg.Done()
+        gq.restart.Done()
     }
-    close(gq.restart)
     close(gq.nextWake)
 }
 
@@ -232,13 +228,9 @@ func (gq *Dispatch) Start() {
             if !okKill {
                 gq.kill = make(chan bool)
             }
-        case _, okRestart :=<-gq.restart:
-            if !okRestart {
-                gq.restart = make(chan bool)
-            }
         case _, okWake :=<-gq.nextWake:
             if !okWake {
-                gq.restart = make(chan bool)
+                gq.nextWake = make(chan bool)
             }
         default:
             inited = true
@@ -261,30 +253,18 @@ func (gq *Dispatch) Start() {
         default:
             // Check the queue size and determine if we need to wait.
             gq.qLock.Lock()
-            gq.waitingOnQ = gq.queue.Len() == 0
-            if gq.waitingOnQ {
-                gq.restartwg.Add(1)
+            if gq.waitingOnQ = gq.queue.Len() == 0 ; gq.waitingOnQ {
+                gq.restart.Add(1)
             }
             gq.qLock.Unlock()
 
             if !gq.waitingOnQ {
                 // Process the head of the queue and start the loop again.
                 gq.next()
-                continue
+            } else {
+                // Wait for a restart signal from gq.Enqueue
+                gq.restart.Wait()
             }
-
-            gq.restartwg.Wait()
-            // Wait for a restart signal from gq.Enqueue
-            /*
-            var cont, ok =<-gq.restart
-            if !ok {
-                gq.restart = make(chan bool)
-                return
-            }
-            if !cont {
-                return
-            }
-            */
         }
     }
 }
