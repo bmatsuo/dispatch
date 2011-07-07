@@ -16,10 +16,10 @@ type PrioritizedTask interface {
     SetKey(float64)
 }
 type PTask struct {
-    F func(int)
+    F func(int64)
     P float64
 }
-func (pt PTask) Func() func(int) {
+func (pt PTask) Func() func(int64) {
     return pt.F
 }
 func (pt PTask) Key() float64 {
