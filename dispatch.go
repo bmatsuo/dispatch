@@ -19,7 +19,7 @@ import (
     //"log"
     //"strings"
     //"path/filepath"
-    "container/list"
+    //"container/list"
 )
 
 //  A Task is the interface satisfied by objects passed to a Dispatch.
@@ -32,39 +32,6 @@ type RegisteredTask interface {
     Task() Task
     Func() func (id int64)
     Id()   int64
-}
-//  A Queue is a queue for RegisteredTasks, used by a Dispatch.
-type Queue interface {
-    Enqueue(task RegisteredTask)  // Insert a DispatchTask
-    Dequeue() RegisteredTask      // Remove the next task.
-    Len() int                     // Number of items to be processed.
-}
-
-//  A DefaultQueue is a FIFO Queue that is implemented
-//  using a linked list.
-type DefaultQueue struct {
-    waiting      *list.List  // A list with values of type func(int)
-}
-//  Create a new DefaultQueue.
-func NewQueue() *DefaultQueue {
-    var q = new(DefaultQueue)
-    q.waiting = list.New()
-    return q
-}
-
-//  See Queue.
-func (dq *DefaultQueue) Len() int {
-    return dq.waiting.Len()
-}
-//  See Queue.
-func (dq *DefaultQueue) Enqueue(task RegisteredTask) {
-    dq.waiting.PushBack(task)
-}
-//  See Queue.
-func (dq *DefaultQueue) Dequeue() RegisteredTask {
-    var taskelm = dq.waiting.Front()
-    dq.waiting.Remove(taskelm)
-    return taskelm.Value.(RegisteredTask)
 }
 
 //  A Dispatch is an automated function dispatch queue with a limited
@@ -88,7 +55,6 @@ type Dispatch struct {
 
     // Handle goroutine-safe queue operations.
     qLock        *sync.Mutex
-    waiting      *list.List  // A list with values of type func(int)
     queue        Queue
 
     // Handle goroutine-safe limiting and identifier operations.
@@ -112,7 +78,6 @@ func NewCustom(maxroutines int, queue Queue) *Dispatch {
     rl.restart   = make(chan bool)
     rl.kill      = make(chan bool)
     rl.nextWake  = make(chan bool)
-    rl.waiting   = list.New()
     rl.queue     = queue
     rl.MaxGo     = maxroutines
     rl.idcount   = 0
@@ -170,7 +135,6 @@ func (gq *Dispatch) Enqueue(t Task) int64 {
     gq.idcount++
     var id = gq.idcount
     gq.queue.Enqueue(dispatchTaskWrapper{id, dt})
-    //gq.waiting.PushBack(dispatchTaskWrapper{id, gqtFunc})
     var loopWaiting = gq.waitingOnQ
     if loopWaiting {
         gq.waitingOnQ = false
@@ -217,7 +181,6 @@ func (gq *Dispatch) next() {
         // Attempt to start processing the file.
         gq.pLock.Lock()
         if gq.processing >= gq.MaxGo {
-            // Too many threads, wait and try again.
             gq.waitingToRun = true
             gq.pLock.Unlock()
             var cont, ok =<-gq.nextWake
@@ -238,8 +201,6 @@ func (gq *Dispatch) next() {
         // Get an element from the queue.
         gq.qLock.Lock()
         var wrapper = gq.queue.Dequeue().(RegisteredTask)
-        //var taskelm = gq.waiting.Front()
-        //gq.waiting.Remove(taskelm)
         gq.qLock.Unlock()
 
         // Begin processing and asyncronously return.
@@ -299,7 +260,6 @@ func (gq *Dispatch) Start() {
             // Check the queue size and determine if we need to wait.
             gq.qLock.Lock()
             gq.waitingOnQ = gq.queue.Len() == 0
-            //gq.waitingOnQ = gq.waiting.Len() == 0
             gq.qLock.Unlock()
 
             if !gq.waitingOnQ {
