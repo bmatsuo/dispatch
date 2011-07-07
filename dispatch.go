@@ -65,7 +65,7 @@ type Dispatch struct {
 
 //  Create a new queue object with a specified limit on concurrency.
 func New(maxroutines int) *Dispatch {
-    return NewCustom(maxroutines, NewQueue())
+    return NewCustom(maxroutines, NewFIFO())
 }
 func NewCustom(maxroutines int, queue Queue) *Dispatch {
     var rl = new(Dispatch)

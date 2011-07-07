@@ -17,28 +17,27 @@ type Queue interface {
     Len() int                     // Number of items to be processed.
 }
 
-//  A DefaultQueue is a FIFO Queue that is implemented
-//  using a linked list.
-type DefaultQueue struct {
+//  A simple linked-list FIFO satisfying the Queue interface.
+type FIFO struct {
     waiting      *list.List  // A list with values of type func(int)
 }
-//  Create a new DefaultQueue.
-func NewQueue() *DefaultQueue {
-    var q = new(DefaultQueue)
+//  Create a new FIFO.
+func NewFIFO() *FIFO {
+    var q = new(FIFO)
     q.waiting = list.New()
     return q
 }
 
 //  See Queue.
-func (dq *DefaultQueue) Len() int {
+func (dq *FIFO) Len() int {
     return dq.waiting.Len()
 }
 //  See Queue.
-func (dq *DefaultQueue) Enqueue(task RegisteredTask) {
+func (dq *FIFO) Enqueue(task RegisteredTask) {
     dq.waiting.PushBack(task)
 }
 //  See Queue.
-func (dq *DefaultQueue) Dequeue() RegisteredTask {
+func (dq *FIFO) Dequeue() RegisteredTask {
     var taskelm = dq.waiting.Front()
     dq.waiting.Remove(taskelm)
     return taskelm.Value.(RegisteredTask)
