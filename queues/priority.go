@@ -20,16 +20,16 @@ type PTask struct {
     F func(int64)
     P float64
 }
-func (pt PTask) Type() string {
+func (pt *PTask) Type() string {
     return "PTask"
 }
-func (pt PTask) SetFunc(f func(int64)) {
+func (pt *PTask) SetFunc(f func(int64)) {
     pt.F = f
 }
-func (pt PTask) Func() func(int64) {
+func (pt *PTask) Func() func(int64) {
     return pt.F
 }
-func (pt PTask) Key() float64 {
+func (pt *PTask) Key() float64 {
     return pt.P
 }
 func (pt *PTask) SetKey(k float64) {
