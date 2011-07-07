@@ -16,7 +16,7 @@ import (
     "flag"
     "sync"
     "time"
-    "log"
+    //"log"
     //"strings"
     "github.com/bmatsuo/dispatch"
     "path/filepath"
@@ -75,7 +75,7 @@ func NewWalker() *Walker {
 }
 func (w *Walker) VisitFile(path string, info *os.FileInfo) {
     var f = func (id int64) {
-        log.Print("stating %s", path)
+        //log.Print("stating %s", path)
         var stat, err = os.Stat(path)
         if err != nil {
             panic(err)
