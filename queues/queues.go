@@ -9,8 +9,8 @@
  *  Description: 
  */
 
-//  Package dispatch/queues defines the Queue interface used in the
-//  package dispatch, as well as several Queue implementations.
+//  Package queues defines the Queue interface used in package dispatch,
+//  and several Queue implementations.
 package queues
 import (
     "container/list"
