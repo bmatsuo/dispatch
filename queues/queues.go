@@ -45,7 +45,7 @@ func registeredTaskSearch(rts []RegisteredTask, less func(t RegisteredTask)bool)
         case true:
             high = mid
         }
-        mid = low + (low-high)/2
+        mid = low + (high-low)/2
     }
     return low
 }
