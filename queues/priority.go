@@ -190,6 +190,7 @@ func (vpq *VectorPriorityQueue) Dequeue() RegisteredTask {
     if vpq.head >= vpq.hmax {
         vpq.v.Cut(0, vpq.head)
         vpq.hmax *= 2
+        vpq.head = 0
     }
     return front
 }
