@@ -230,7 +230,7 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
                 return t.Task().(PrioritizedTask).Key() < key
             })
     if apq.tail != len(apq.v) {
-        for j := apq.tail ; j > insertoffset ; j-- {
+        for j := apq.tail ; j > apq.head+insertoffset ; j-- {
             apq.v[j] = apq.v[j-1]
         }
         apq.v[apq.head+insertoffset] = task
