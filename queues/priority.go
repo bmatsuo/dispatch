@@ -228,9 +228,6 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
     var insertoffset = sort.Search(
             n,
             func(i int)bool{
-                if n == 0 || i >= n {
-                    return true
-                }
                 return apq.v[apq.head+i].Task().(PrioritizedTask).Key() >= key } )
     if apq.tail != len(apq.v) {
         for j := apq.tail ; j > apq.head+insertoffset ; j-- {
