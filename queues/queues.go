@@ -33,22 +33,20 @@ func registeredTaskSearch(rts []RegisteredTask, less func(t RegisteredTask)bool)
     var (
         low  = 0
         high = len(rts)
-        mid  = (high-low+1)/2
+        mid  = (high-low)/2
         t    RegisteredTask
     )
     if high == 0 {
         return 0
     }
-    /*
     if less(rts[0]) {
         return 0
     }
     if !less(rts[high]) {
         return high
     }
-    */
     for low < high {
-        t = rts[mid-1]
+        t = rts[mid]
         var leftSide = less(t)
         switch leftSide {
         case true:
@@ -56,7 +54,7 @@ func registeredTaskSearch(rts []RegisteredTask, less func(t RegisteredTask)bool)
         case false:
             low = mid
         }
-        mid = low + (high-low+1)/2
+        mid = low + (high-low)/2
     }
     return low
 }
