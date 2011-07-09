@@ -241,12 +241,12 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
         return
     }
     var newv = apq.v
-    if apq.head < len(apq.v)/2 {
+    if apq.head <= len(apq.v)/2 {
         newv = make([]RegisteredTask, 2* len(apq.v))
     }
     copy(newv, apq.v[apq.head:apq.head+insertoffset])
     newv[insertoffset] = task
-    copy(newv, apq.v[apq.head+insertoffset:apq.tail])
+    copy(newv[insertoffset+1:], apq.v[apq.head+insertoffset:apq.tail])
     for i := apq.head ; i < apq.tail ; i++ {
         apq.v[i] = nil
     }
