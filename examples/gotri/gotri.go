@@ -23,8 +23,10 @@ import (
 )
 
 var (
-    altDispatch = dispatch.New(10)
-    swimDispatch = dispatch.NewCustom(10, queues.NewPriorityQueue())
+    maxswimmers = 10
+    fifoDispatch = dispatch.New(maxswimmers)
+    swimDispatch = dispatch.NewCustom(maxswimmers, queues.NewPriorityQueue())
+    vecDispatch = dispatch.NewCustom(maxswimmers, queues.NewVectorPriorityQueue())
     finishLine = new(sync.WaitGroup)
 )
 
@@ -76,7 +78,9 @@ func (a Athlete) BikeRoutine(i int) func() {
         }
         time.Sleep(a.Btime)
         if opt.usefifo {
-            altDispatch.Enqueue(&queues.PTask{a.SwimRoutine(i), a.Priority()})
+            fifoDispatch.Enqueue(&queues.PTask{a.SwimRoutine(i), a.Priority()})
+        } else if opt.usevec {
+            vecDispatch.Enqueue(&queues.PTask{a.SwimRoutine(i), a.Priority()})
         } else {
             swimDispatch.Enqueue(&queues.PTask{a.SwimRoutine(i), a.Priority()})
         }
@@ -99,6 +103,7 @@ type Options struct {
     maxstime    int
     maxrtime    int
     usefifo     bool
+    usevec     bool
     verbose     bool
 }
 var opt = Options{}
@@ -110,6 +115,7 @@ func SetupFlags() *flag.FlagSet {
     fs.IntVar(&(opt.maxstime), "s", 5, "Max time for a athlete while swimming.")
     fs.IntVar(&(opt.maxrtime), "r", 5, "Max time for a athlete while running.")
     fs.BoolVar(&(opt.usefifo), "f", false, "Use a FIFO queue instead.")
+    fs.BoolVar(&(opt.usevec), "vec", false, "Use a VectorPriorityQueue queue instead.")
     fs.BoolVar(&(opt.verbose), "v", false, "Verbose program output.")
     return fs
 }
@@ -125,7 +131,9 @@ func main() {
     ParseFlags()
 
     if opt.usefifo {
-        altDispatch.MaxGo = opt.numSwimmers
+        fifoDispatch.MaxGo = opt.numSwimmers
+    } else if opt.usevec {
+        vecDispatch.MaxGo = opt.numSwimmers
     } else {
         swimDispatch.MaxGo = opt.numSwimmers
     }
@@ -137,7 +145,9 @@ func main() {
         athletes[i] = RandomAthlete()
     }
     if opt.usefifo {
-        go altDispatch.Start()
+        go fifoDispatch.Start()
+    } else if opt.usevec {
+        go vecDispatch.Start()
     } else {
         go swimDispatch.Start()
     }
