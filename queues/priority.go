@@ -9,6 +9,7 @@ package queues
 import (
     "fmt"
     "container/heap"
+    "container/vector"
 )
 
 type PrioritizedTask interface {
@@ -125,4 +126,78 @@ func (pq *PriorityQueue) SetKey(id int64, k float64) {
     heap.Remove(pq.h, i)
     task.Task().(PrioritizedTask).SetKey(k)
     heap.Push(pq.h, task)
+}
+
+type VectorPriorityQueue struct {
+    v *vector.Vector
+}
+
+func NewVectorPriorityQueue() *VectorPriorityQueue {
+    var vpq = new(VectorPriorityQueue)
+    vpq.v = new(vector.Vector)
+    return vpq
+}
+
+func (vpq *VectorPriorityQueue) Len() int {
+    return vpq.v.Len()
+}
+type etypeStopIter struct {
+}
+func (e etypeStopIter) String() string {
+    return "STOPITER"
+}
+func (vpq *VectorPriorityQueue) Enqueue(task RegisteredTask) {
+    switch task.Task().(type) {
+    case PrioritizedTask:
+        break
+    default:
+        panic(fmt.Sprintf("nokey %s", task.Task().Type()))
+    }
+    var i int
+    defer func() {
+        if r := recover(); r != nil {
+            switch r.(type) {
+            case etypeStopIter:
+                break
+            default:
+                panic(r)
+            }
+        }
+        vpq.v.Insert(i, task)
+    } ()
+    vpq.v.Do(func (telm interface{}) {
+        if task.Task().(PrioritizedTask).Key() > telm.(RegisteredTask).Task().(PrioritizedTask).Key() {
+            i++
+        } else {
+            panic(etypeStopIter{})
+        }
+    })
+}
+func (vpq *VectorPriorityQueue) Dequeue() RegisteredTask {
+    var head = vpq.v.At(0).(RegisteredTask)
+    vpq.v.Delete(0)
+    return head
+}
+func (vpq *VectorPriorityQueue) SetKey(id int64, k float64) {
+    var i int
+    defer func() {
+        if r := recover(); r != nil {
+            switch r.(type) {
+            case etypeStopIter:
+                var rtask = vpq.v.At(i).(RegisteredTask)
+                vpq.v.Delete(i)
+                rtask.Task().(PrioritizedTask).SetKey(k)
+                vpq.Enqueue(rtask)
+            default:
+                panic(r)
+            }
+        }
+    } ()
+    vpq.v.Do(func (telm interface{}) {
+        if telm.(RegisteredTask).Id() != id {
+            i++
+        } else {
+            panic(etypeStopIter{})
+        }
+    })
 }
