@@ -128,6 +128,10 @@ func (pq *PriorityQueue) SetKey(id int64, k float64) {
     heap.Push(pq.h, task)
 }
 
+//  A priority queue based on the "container/vector" package.
+//  Ideally, an array-based priority queue implementation should have
+//  fast dequeues and slow enqueues. I fear the vector.Vector class
+//  gives slow equeues and slow dequeues.
 type VectorPriorityQueue struct {
     v *vector.Vector
 }
@@ -200,4 +204,74 @@ func (vpq *VectorPriorityQueue) SetKey(id int64, k float64) {
             panic(etypeStopIter{})
         }
     })
+}
+
+type ArrayPriorityQueue struct {
+    v          []RegisteredTask
+    head, tail int
+}
+
+func NewArrayPriorityQueue() *ArrayPriorityQueue {
+    var apq = new(ArrayPriorityQueue)
+    apq.v = make([]RegisteredTask, 10)
+    return apq
+}
+
+func (apq *ArrayPriorityQueue) Len() int {
+    return apq.tail - apq.head
+}
+
+func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
+    var insertpos = -1
+    var key = task.Task().(PrioritizedTask).Key()
+    if apq.tail != len(apq.v) {
+        var i int
+        for i = apq.head ; i < apq.tail ; i++ {
+            if apq.v[i].Task().(PrioritizedTask).Key() > key {
+                break
+            }
+        }
+        for j := apq.tail ; j > i ; j-- {
+            apq.v[j] = apq.v[j-1]
+        }
+        apq.v[i] = task
+        return
+    }
+    var newv []RegisteredTask
+    if apq.head > len(apq.v)/2 {
+        newv = make([]RegisteredTask, 2* len(apq.v))
+    }
+    var j = 0
+    for i := apq.head ; i < apq.tail ; i++ {
+        if insertpos == -1 && apq.v[i].Task().(PrioritizedTask).Key() > key {
+            insertpos = j
+            newv[j] = task
+            i--
+        } else {
+            newv[j] = apq.v[i]
+            apq.v[i] = nil
+        }
+        j++
+    }
+    apq.v = newv
+    apq.head = 0
+    if j == 0 {
+        apq.v[0] = task
+        apq.tail = 1
+    } else {
+        apq.tail = j
+    }
+}
+
+func (apq *ArrayPriorityQueue) Dequeue() RegisteredTask {
+    if apq.Len() == 0 {
+        panic("empt")
+    }
+    var task = apq.v[apq.head]
+    apq.v[apq.head] = nil
+    apq.head++
+    return task
+}
+
+func (apq *ArrayPriorityQueue) SetKey(id int64, k float64) {
 }
