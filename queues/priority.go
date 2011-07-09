@@ -237,7 +237,6 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
         apq.tail++
         return
     }
-    var insertpos = -1
     var newv = apq.v
     if apq.head > len(apq.v)/2 {
         newv = make([]RegisteredTask, 2* len(apq.v))
