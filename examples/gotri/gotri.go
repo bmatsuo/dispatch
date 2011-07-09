@@ -27,6 +27,7 @@ var (
     fifoDispatch = dispatch.New(maxswimmers)
     swimDispatch = dispatch.NewCustom(maxswimmers, queues.NewPriorityQueue())
     vecDispatch = dispatch.NewCustom(maxswimmers, queues.NewVectorPriorityQueue())
+    arrayDispatch = dispatch.NewCustom(maxswimmers, queues.NewArrayPriorityQueue())
     finishLine = new(sync.WaitGroup)
 )
 
@@ -81,6 +82,8 @@ func (a Athlete) BikeRoutine(i int) func() {
             fifoDispatch.Enqueue(&queues.PTask{a.SwimRoutine(i), a.Priority()})
         } else if opt.usevec {
             vecDispatch.Enqueue(&queues.PTask{a.SwimRoutine(i), a.Priority()})
+        } else if opt.usearray {
+            arrayDispatch.Enqueue(&queues.PTask{a.SwimRoutine(i), a.Priority()})
         } else {
             swimDispatch.Enqueue(&queues.PTask{a.SwimRoutine(i), a.Priority()})
         }
@@ -103,7 +106,8 @@ type Options struct {
     maxstime    int
     maxrtime    int
     usefifo     bool
-    usevec     bool
+    usevec      bool
+    usearray    bool
     verbose     bool
 }
 var opt = Options{}
@@ -116,6 +120,7 @@ func SetupFlags() *flag.FlagSet {
     fs.IntVar(&(opt.maxrtime), "r", 5, "Max time for a athlete while running.")
     fs.BoolVar(&(opt.usefifo), "f", false, "Use a FIFO queue instead.")
     fs.BoolVar(&(opt.usevec), "vec", false, "Use a VectorPriorityQueue queue instead.")
+    fs.BoolVar(&(opt.usearray), "array", false, "Use a ArrayPriorityQueue queue instead.")
     fs.BoolVar(&(opt.verbose), "v", false, "Verbose program output.")
     return fs
 }
@@ -134,6 +139,8 @@ func main() {
         fifoDispatch.MaxGo = opt.numSwimmers
     } else if opt.usevec {
         vecDispatch.MaxGo = opt.numSwimmers
+    } else if opt.usearray {
+        arrayDispatch.MaxGo = opt.numSwimmers
     } else {
         swimDispatch.MaxGo = opt.numSwimmers
     }
@@ -148,6 +155,8 @@ func main() {
         go fifoDispatch.Start()
     } else if opt.usevec {
         go vecDispatch.Start()
+    } else if opt.usearray {
+        go arrayDispatch.Start()
     } else {
         go swimDispatch.Start()
     }
@@ -159,6 +168,9 @@ func main() {
     var t2 = time.Nanoseconds()
 
     swimDispatch.Stop()
+    fifoDispatch.Stop()
+    arrayDispatch.Stop()
+    vecDispatch.Stop()
 
     fmt.Printf("Triathalon finished! [%.03fs]", float64(t2-t1)/1e9)
 }

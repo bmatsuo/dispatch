@@ -222,7 +222,6 @@ func (apq *ArrayPriorityQueue) Len() int {
 }
 
 func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
-    var insertpos = -1
     var key = task.Task().(PrioritizedTask).Key()
     if apq.tail != len(apq.v) {
         var i int
@@ -235,8 +234,10 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
             apq.v[j] = apq.v[j-1]
         }
         apq.v[i] = task
+        apq.tail++
         return
     }
+    var insertpos = -1
     var newv []RegisteredTask
     if apq.head > len(apq.v)/2 {
         newv = make([]RegisteredTask, 2* len(apq.v))
@@ -265,7 +266,7 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
 
 func (apq *ArrayPriorityQueue) Dequeue() RegisteredTask {
     if apq.Len() == 0 {
-        panic("empt")
+        panic("empty")
     }
     var task = apq.v[apq.head]
     apq.v[apq.head] = nil
