@@ -243,10 +243,9 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
         newv = make([]RegisteredTask, 2* len(apq.v))
     }
     var i, j int
+    j = 0
     for i = apq.head ; i < apq.tail ; i++ {
-        if insertpos == -1 && apq.v[i].Task().(PrioritizedTask).Key() > key {
-            insertpos = j
-            newv[j] = task
+        if apq.v[i].Task().(PrioritizedTask).Key() > key {
             break
         } else {
             newv[j] = apq.v[i]
