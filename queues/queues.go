@@ -33,7 +33,7 @@ func registeredTaskSearch(rts []RegisteredTask, less func(t RegisteredTask)bool)
     var (
         low  = 0
         high = len(rts)
-        mid  = (high-low)/2
+        mid  = (high-low+1)/2
         t    RegisteredTask
     )
     /*
