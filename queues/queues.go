@@ -30,8 +30,8 @@ type RegisteredTask interface {
     Id()   int64
 }
 
-func registeredTaskSearch(rts []RegisteredTask, greater func(t RegisteredTask)bool) int {
-    return sort.Search(len(rts), func(i int)bool{return less(rts[i])})
+func registeredTaskSearch(rts []RegisteredTask, geq func(t RegisteredTask)bool) int {
+    return sort.Search(len(rts), func(i int)bool{return geq(rts[i])})
 }
 
 //  A Queue is a queue for RegisteredTasks, used by a Dispatch.
