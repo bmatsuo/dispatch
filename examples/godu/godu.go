@@ -34,7 +34,7 @@ type Options struct {
 var opt = Options{}
 func SetupFlags() *flag.FlagSet {
     var fs = flag.NewFlagSet("godirs", flag.ExitOnError)
-    fs.BoolVar(&(opt.beClever), "c", false, "Use the clever Dispatch.")
+    fs.BoolVar(&(opt.beClever), "c", true, "Use the clever Dispatch method.")
     fs.BoolVar(&(opt.verbose), "v", false, "Verbose program output.")
     return fs
 }

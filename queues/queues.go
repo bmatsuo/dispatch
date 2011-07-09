@@ -88,7 +88,7 @@ func (dq *FIFO) Dequeue() RegisteredTask {
 //  Does nothing. See Queue.
 func (dq *FIFO) SetKey(id int64, k float64) { }
 
-//  A naive Last In First Out (LIFO) Queue.
+//  A naive Last In First Out (LIFO) Queue (also known as a stack).
 type LIFO struct {
     top    int
     stack   []RegisteredTask
