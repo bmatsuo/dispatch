@@ -28,6 +28,28 @@ type RegisteredTask interface {
     Func() func (id int64)
     Id()   int64
 }
+
+func registeredTaskSearch(rts []RegisteredTask, less func(t RegisteredTask)bool) int {
+    var (
+        low  = 0
+        high = len(rts)
+        mid  = (high-low)/2
+        t    RegisteredTask
+    )
+    for high > low {
+        t = rts[mid]
+        var leftSide = less(t)
+        switch leftSide {
+        case false:
+            low = mid
+        case true:
+            high = mid
+        }
+        mid = low + (low-high)/2
+    }
+    return low
+}
+
 //  A Queue is a queue for RegisteredTasks, used by a Dispatch.
 type Queue interface {
     Enqueue(task RegisteredTask)  // Insert a DispatchTask
