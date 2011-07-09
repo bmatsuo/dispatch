@@ -40,27 +40,60 @@ type Queue interface {
 //  A simple linked-list First In First Out (FIFO) Queue.
 type FIFO struct {
     waiting      *list.List  // A list with values of type func(int)
+    head, tail  int
+    length      int
+    circ        []RegisteredTask
 }
 //  Create a new FIFO.
 func NewFIFO() *FIFO {
     var q = new(FIFO)
     q.waiting = list.New()
+    q.circ = make([]RegisteredTask, 10)
+    q.head = 0
+    q.tail = 0
+    q.length = 0
     return q
 }
 
 //  See Queue.
 func (dq *FIFO) Len() int {
-    return dq.waiting.Len()
+    //return dq.waiting.Len()
+    return dq.length
 }
 //  See Queue.
 func (dq *FIFO) Enqueue(task RegisteredTask) {
-    dq.waiting.PushBack(task)
+    //dq.waiting.PushBack(task)
+    var n = len(dq.circ)
+    if dq.length == len(dq.circ) {
+        // Copy the circular slice into a new slice with twice the length.
+        var tmp = dq.circ
+        dq.circ = make([]RegisteredTask, 2*n)
+        for i := 0 ; i < n ; i++ {
+            var j = (dq.head+i)%n
+            dq.circ[i] = tmp[j]
+            tmp[j] = nil
+        }
+        dq.head = 0
+        dq.tail = n
+    }
+    dq.circ[dq.tail] = task
+    dq.tail = (dq.tail+1)%n
+    dq.length++
 }
 //  See Queue.
 func (dq *FIFO) Dequeue() RegisteredTask {
+    /*
     var taskelm = dq.waiting.Front()
     dq.waiting.Remove(taskelm)
     return taskelm.Value.(RegisteredTask)
+    */
+    if dq.length == 0 {
+        panic("empty")
+    }
+    var task = dq.circ[dq.head]
+    dq.head = (dq.head+1)%dq.length
+    dq.length--
+    return task
 }
 //  Does nothing. See Queue.
 func (dq *FIFO) SetKey(id int64, k float64) { }
