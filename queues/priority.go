@@ -233,7 +233,7 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
         for j := apq.tail ; j > apq.head+insertoffset ; j-- {
             apq.v[j] = apq.v[j-1]
         }
-        apq.v[apq.head+insertoffset] = task
+        apq.v[apq.head+insertoffset-1] = task
         apq.tail++
         return
     }
@@ -243,18 +243,21 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
     }
     var i, j int
     j = 0
-    for i = apq.head ; i < apq.head+insertoffset ; i++ {
+    i = apq.head
+    for j < insertoffset {
         newv[j] = apq.v[i]
         apq.v[i] = nil
         j++
+        i++
     }
     //fmt.Fprintf(os.Stderr, "Length %d index %d\n", len(newv), j)
     newv[insertoffset] = task
     j++
-    for ; i < apq.tail ; i++ {
+    for i < apq.tail  {
         newv[j] = apq.v[i]
         apq.v[i] = nil
         j++
+        i++
     }
     apq.v = newv
     apq.head = 0
