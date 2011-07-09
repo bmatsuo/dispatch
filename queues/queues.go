@@ -44,7 +44,7 @@ func registeredTaskSearch(rts []RegisteredTask, less func(t RegisteredTask)bool)
     for low < high {
         switch less(rts[mid]) {
         case true:
-            low = mid
+            low = mid+1
         case false:
             high = mid
         }
