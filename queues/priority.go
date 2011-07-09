@@ -91,10 +91,15 @@ func (h *pQueue) FindId(id int64) (int, RegisteredTask) {
     return -1, nil
 }
 
+//  A heap-based priority queue. This implementation of a priority queue
+//  is ideal for many situations involving a priority queue. However, other
+//  priority queue implementations exist, each with their strengths and
+//  weaknesses. See ArrayPriorityQueue and VectorPriorityQueue.
 type PriorityQueue struct {
     h  *pQueue
 }
 
+//  Create a new heap-based priority queue.
 func NewPriorityQueue() *PriorityQueue {
     var pq = new(PriorityQueue)
     pq.h = newPQueue()
@@ -102,15 +107,20 @@ func NewPriorityQueue() *PriorityQueue {
     return pq
 }
 
+//  The number of items in the queue.
 func (pq *PriorityQueue) Len() int {
     return pq.h.Len()
 }
+
+//  Remove a task from the queue with runtime O(log(n))
 func (pq *PriorityQueue) Dequeue() RegisteredTask {
     if pq.Len() <= 0 {
         panic("empty")
     }
     return heap.Pop(pq.h).(RegisteredTask)
 }
+
+//  Add a task to the queue with runtime O(log(n))
 func (pq *PriorityQueue) Enqueue(task RegisteredTask) {
     switch task.Task().(type) {
     case PrioritizedTask:
@@ -119,6 +129,8 @@ func (pq *PriorityQueue) Enqueue(task RegisteredTask) {
         panic(fmt.Sprintf("nokey %s", task.Task().Type()))
     }
 }
+
+//  Set a task's key with runtime O(n).
 func (pq *PriorityQueue) SetKey(id int64, k float64) {
     var i, task = pq.h.FindId(id)
     if i < 0 {
@@ -134,23 +146,27 @@ func (pq *PriorityQueue) SetKey(id int64, k float64) {
 //  fast dequeues and slow enqueues. I fear the vector.Vector class
 //  gives slow equeues and slow dequeues.
 type VectorPriorityQueue struct {
+    head   int
+    hmax   int
     v *vector.Vector
 }
-
 func NewVectorPriorityQueue() *VectorPriorityQueue {
     var vpq = new(VectorPriorityQueue)
     vpq.v = new(vector.Vector)
+    vpq.hmax = 1
     return vpq
 }
 
 func (vpq *VectorPriorityQueue) Len() int {
-    return vpq.v.Len()
+    return vpq.v.Len() - vpq.head
 }
 type etypeStopIter struct {
 }
 func (e etypeStopIter) String() string {
     return "STOPITER"
 }
+
+//  Linear time enqueue operation.
 func (vpq *VectorPriorityQueue) Enqueue(task RegisteredTask) {
     switch task.Task().(type) {
     case PrioritizedTask:
@@ -158,70 +174,68 @@ func (vpq *VectorPriorityQueue) Enqueue(task RegisteredTask) {
     default:
         panic(fmt.Sprintf("nokey %s", task.Task().Type()))
     }
-    var i int
-    defer func() {
-        if r := recover(); r != nil {
-            switch r.(type) {
-            case etypeStopIter:
-                break
-            default:
-                panic(r)
+    var key = task.Task().(PrioritizedTask).Key()
+    var insertoffset = sort.Search(vpq.Len(), func(i int) bool {
+            if vpq.v.At(vpq.head+i).(RegisteredTask).Task().(PrioritizedTask).Key() >= key {
+                return true
             }
-        }
-        vpq.v.Insert(i, task)
-    } ()
-    vpq.v.Do(func (telm interface{}) {
-        if task.Task().(PrioritizedTask).Key() > telm.(RegisteredTask).Task().(PrioritizedTask).Key() {
-            i++
-        } else {
-            panic(etypeStopIter{})
-        }
-    })
-}
-func (vpq *VectorPriorityQueue) Dequeue() RegisteredTask {
-    var head = vpq.v.At(0).(RegisteredTask)
-    vpq.v.Delete(0)
-    return head
-}
-func (vpq *VectorPriorityQueue) SetKey(id int64, k float64) {
-    var i int
-    defer func() {
-        if r := recover(); r != nil {
-            switch r.(type) {
-            case etypeStopIter:
-                var rtask = vpq.v.At(i).(RegisteredTask)
-                vpq.v.Delete(i)
-                rtask.Task().(PrioritizedTask).SetKey(k)
-                vpq.Enqueue(rtask)
-            default:
-                panic(r)
-            }
-        }
-    } ()
-    vpq.v.Do(func (telm interface{}) {
-        if telm.(RegisteredTask).Id() != id {
-            i++
-        } else {
-            panic(etypeStopIter{})
-        }
-    })
+            return false })
+    vpq.v.Insert(vpq.head+insertoffset, task)
 }
 
+//  Dequeue operation with (I believe) a constant amortized cost.
+func (vpq *VectorPriorityQueue) Dequeue() RegisteredTask {
+    var front = vpq.v.At(vpq.head).(RegisteredTask)
+    vpq.head++
+    if vpq.head >= vpq.hmax {
+        vpq.v.Cut(0, vpq.head)
+        vpq.hmax *= 2
+    }
+    return front
+}
+
+//  Linear time set key operation.
+func (vpq *VectorPriorityQueue) SetKey(id int64, k float64) {
+    var (
+        n    = vpq.Len()
+        i    int
+        task RegisteredTask
+    )
+    for i = vpq.head ; i < n ; i++ {
+        task = vpq.v.At(i).(RegisteredTask)
+        if task.Id() == id {
+            break
+        }
+    }
+    if i < n {
+        vpq.v.Delete(i)
+        task.Task().(PrioritizedTask).SetKey(k)
+        vpq.Enqueue(task)
+    }
+}
+
+
+//  An array based priority queue with a constant time dequeue and a
+//  linear time equeue.
 type ArrayPriorityQueue struct {
     v          []RegisteredTask
     head, tail int
 }
 
+
+//  Create a new array-based priority queue.
 func NewArrayPriorityQueue() *ArrayPriorityQueue {
     var apq = new(ArrayPriorityQueue)
     apq.v = make([]RegisteredTask, 10)
     return apq
 }
 
+//  The number of items in the queue.
 func (apq *ArrayPriorityQueue) Len() int {
     return apq.tail - apq.head
 }
 
+//  Add a task to the queue with runtime O(n) (on average n/2 + log_2(n))
 func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
     var key = task.Task().(PrioritizedTask).Key()
     var n = apq.Len()
@@ -252,6 +266,7 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
     apq.tail = n+1
 }
 
+//  Remove the next task with a runtime O(1).
 func (apq *ArrayPriorityQueue) Dequeue() RegisteredTask {
     if apq.Len() == 0 {
         panic("empty")
@@ -262,5 +277,6 @@ func (apq *ArrayPriorityQueue) Dequeue() RegisteredTask {
     return task
 }
 
+//  Add a task to the queue with runtime O(n).
 func (apq *ArrayPriorityQueue) SetKey(id int64, k float64) {
 }
