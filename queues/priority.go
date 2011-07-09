@@ -7,6 +7,7 @@ package queues
  *  Description: 
  */
 import (
+    "os"
     "fmt"
     "container/heap"
     "container/vector"
@@ -252,6 +253,7 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
         }
         j++
     }
+    fmt.Fprintf(os.Stderr, "Length %d index %d\n", len(newv), j)
     newv[j] = task
     j++
     for ; i < apq.tail ; i++ {
