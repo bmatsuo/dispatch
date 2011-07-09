@@ -39,7 +39,7 @@ func registeredTaskSearch(rts []RegisteredTask, less func(t RegisteredTask)bool)
     if high == 0 || less(rts[0]){
         return 0
     }
-    if !less(rts[high]) {
+    if !less(rts[high-1]) {
         return high
     }
     for low < high {
