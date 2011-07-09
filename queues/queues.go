@@ -13,7 +13,6 @@
 //  and several Queue implementations.
 package queues
 import (
-    "sort"
 )
 
 //  A Task is the interface satisfied by objects passed to a Dispatch.
@@ -28,10 +27,6 @@ type RegisteredTask interface {
     Task() Task
     Func() func (id int64)
     Id()   int64
-}
-
-func registeredTaskSearch(rts []RegisteredTask, geq func(t RegisteredTask)bool) int {
-    return sort.Search(len(rts), func(i int)bool{return geq(rts[i])})
 }
 
 //  A Queue is a queue for RegisteredTasks, used by a Dispatch.

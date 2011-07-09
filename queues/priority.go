@@ -7,7 +7,7 @@ package queues
  *  Description: 
  */
 import (
-    //"os"
+    "sort"
     "fmt"
     "container/heap"
     "container/vector"
@@ -224,11 +224,11 @@ func (apq *ArrayPriorityQueue) Len() int {
 
 func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
     var key = task.Task().(PrioritizedTask).Key()
-    var insertoffset = registeredTaskSearch(
-            apq.v[apq.head:apq.tail],
-            func(t RegisteredTask) bool {
-                return t.Task().(PrioritizedTask).Key() >= key
-            })
+    var n = apq.Len()
+    var insertoffset = sort.Search(
+            n,
+            func(i int)bool{
+                return apq.v[apq.head+i].Task().(PrioritizedTask).Key() >= key } )
     if apq.tail != len(apq.v) {
         for j := apq.tail ; j > apq.head+insertoffset ; j-- {
             apq.v[j] = apq.v[j-1]
@@ -241,27 +241,15 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
     if apq.head < len(apq.v)/2 {
         newv = make([]RegisteredTask, 2* len(apq.v))
     }
-    var i, j int
-    j = 0
-    i = apq.head
-    for j < insertoffset {
-        newv[j] = apq.v[i]
-        apq.v[i] = nil
-        j++
-        i++
-    }
-    //fmt.Fprintf(os.Stderr, "Length %d index %d\n", len(newv), j)
+    copy(newv, apq.v[apq.head:apq.head+insertoffset])
     newv[insertoffset] = task
-    j++
-    for i < apq.tail  {
-        newv[j] = apq.v[i]
+    copy(newv, apq.v[apq.head+insertoffset:apq.tail])
+    for i := apq.head ; i < apq.tail ; i++ {
         apq.v[i] = nil
-        j++
-        i++
     }
     apq.v = newv
     apq.head = 0
-    apq.tail = j
+    apq.tail = n+1
 }
 
 func (apq *ArrayPriorityQueue) Dequeue() RegisteredTask {
