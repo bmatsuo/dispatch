@@ -238,30 +238,32 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
         return
     }
     var insertpos = -1
-    var newv []RegisteredTask
+    var newv = apq.v
     if apq.head > len(apq.v)/2 {
         newv = make([]RegisteredTask, 2* len(apq.v))
     }
-    var j = 0
-    for i := apq.head ; i < apq.tail ; i++ {
+    var i, j int
+    for i = apq.head ; i < apq.tail ; i++ {
         if insertpos == -1 && apq.v[i].Task().(PrioritizedTask).Key() > key {
             insertpos = j
             newv[j] = task
-            i--
+            break
         } else {
             newv[j] = apq.v[i]
             apq.v[i] = nil
         }
         j++
     }
+    newv[j] = task
+    j++
+    for ; i < apq.tail ; i++ {
+        newv[j] = apq.v[i]
+        apq.v[i] = nil
+        j++
+    }
     apq.v = newv
     apq.head = 0
-    if j == 0 {
-        apq.v[0] = task
-        apq.tail = 1
-    } else {
-        apq.tail = j
-    }
+    apq.tail = j
 }
 
 func (apq *ArrayPriorityQueue) Dequeue() RegisteredTask {
