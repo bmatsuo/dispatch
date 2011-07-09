@@ -36,7 +36,7 @@ type Queue interface {
     SetKey(int64, float64)        // Set a task's key (priority queues).
 }
 
-//  A simple linked-list First In First Out (FIFO) Queue.
+//  A naive First In First Out (FIFO) Queue.
 type FIFO struct {
     head, tail  int
     length      int
@@ -88,7 +88,7 @@ func (dq *FIFO) Dequeue() RegisteredTask {
 //  Does nothing. See Queue.
 func (dq *FIFO) SetKey(id int64, k float64) { }
 
-//  A simple linked-list Last In First Out (LIFO) Queue.
+//  A naive Last In First Out (LIFO) Queue.
 type LIFO struct {
     top    int
     stack   []RegisteredTask
