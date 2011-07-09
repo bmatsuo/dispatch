@@ -30,7 +30,7 @@ type RegisteredTask interface {
     Id()   int64
 }
 
-func registeredTaskSearch(rts []RegisteredTask, less func(t RegisteredTask)bool) int {
+func registeredTaskSearch(rts []RegisteredTask, greater func(t RegisteredTask)bool) int {
     return sort.Search(len(rts), func(i int)bool{return less(rts[i])})
 }
 
