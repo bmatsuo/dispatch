@@ -13,7 +13,6 @@
 //  and several Queue implementations.
 package queues
 import (
-    "container/list"
 )
 
 //  A Task is the interface satisfied by objects passed to a Dispatch.
@@ -39,7 +38,6 @@ type Queue interface {
 
 //  A simple linked-list First In First Out (FIFO) Queue.
 type FIFO struct {
-    waiting      *list.List  // A list with values of type func(int)
     head, tail  int
     length      int
     circ        []RegisteredTask
@@ -47,7 +45,6 @@ type FIFO struct {
 //  Create a new FIFO.
 func NewFIFO() *FIFO {
     var q = new(FIFO)
-    q.waiting = list.New()
     q.circ = make([]RegisteredTask, 10)
     q.head = 0
     q.tail = 0
@@ -57,12 +54,10 @@ func NewFIFO() *FIFO {
 
 //  See Queue.
 func (dq *FIFO) Len() int {
-    //return dq.waiting.Len()
     return dq.length
 }
 //  See Queue.
 func (dq *FIFO) Enqueue(task RegisteredTask) {
-    //dq.waiting.PushBack(task)
     var n = len(dq.circ)
     if dq.length == len(dq.circ) {
         // Copy the circular slice into a new slice with twice the length.
@@ -82,11 +77,6 @@ func (dq *FIFO) Enqueue(task RegisteredTask) {
 }
 //  See Queue.
 func (dq *FIFO) Dequeue() RegisteredTask {
-    /*
-    var taskelm = dq.waiting.Front()
-    dq.waiting.Remove(taskelm)
-    return taskelm.Value.(RegisteredTask)
-    */
     if dq.length == 0 {
         panic("empty")
     }
@@ -100,28 +90,41 @@ func (dq *FIFO) SetKey(id int64, k float64) { }
 
 //  A simple linked-list Last In First Out (LIFO) Queue.
 type LIFO struct {
-    waiting      *list.List  // A list with values of type func(int)
+    top    int
+    stack   []RegisteredTask
 }
 //  Create a new LIFO.
 func NewLIFO() *LIFO {
     var q = new(LIFO)
-    q.waiting = list.New()
+    q.stack = make([]RegisteredTask, 10)
+    q.top = 0
     return q
 }
 
 //  See Queue.
 func (dq *LIFO) Len() int {
-    return dq.waiting.Len()
+    return dq.top
 }
 //  See Queue.
 func (dq *LIFO) Enqueue(task RegisteredTask) {
-    dq.waiting.PushFront(task)
+    var n = len(dq.stack)
+    if dq.top == n {
+        var tmpstack = dq.stack
+        dq.stack = make([]RegisteredTask, 2*n)
+        copy(dq.stack, tmpstack)
+    }
+    dq.stack[dq.top] = task
+    dq.top++
 }
 //  See Queue.
 func (dq *LIFO) Dequeue() RegisteredTask {
-    var taskelm = dq.waiting.Front()
-    dq.waiting.Remove(taskelm)
-    return taskelm.Value.(RegisteredTask)
+    if dq.top == 0 {
+        panic("empty")
+    }
+    dq.top--
+    var task = dq.stack[dq.top]
+    dq.stack[dq.top] = nil
+    return task
 }
 //  Does nothing. See Queue.
 func (dq *LIFO) SetKey(id int64, k float64) { }
