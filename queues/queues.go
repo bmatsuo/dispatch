@@ -31,7 +31,7 @@ type RegisteredTask interface {
 }
 
 func registeredTaskSearch(rts []RegisteredTask, less func(t RegisteredTask)bool) int {
-    return sort.Search(len(rts), func(i int){less(rts)})
+    return sort.Search(len(rts), func(i int){less(rts[i])})
     var (
         low  = 0
         high = len(rts)
