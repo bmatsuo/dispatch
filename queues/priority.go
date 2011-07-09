@@ -233,7 +233,7 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
         for j := apq.tail ; j > insertoffset ; j-- {
             apq.v[j] = apq.v[j-1]
         }
-        apq.v[i] = task
+        apq.v[insertoffset] = task
         apq.tail++
         return
     }
