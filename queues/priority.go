@@ -13,11 +13,15 @@ import (
     "container/vector"
 )
 
+//  A PrioritizedTask is a Task that also has key (float64). Generally,
+//  a lower key means higher priority.
 type PrioritizedTask interface {
     Task
     Key() float64
     SetKey(float64)
 }
+//  A structure that satisfies the PrioritizedTask interface (and thus
+//  Task aswell).
 type PTask struct {
     F func(int64)
     P float64
@@ -112,7 +116,7 @@ func (pq *PriorityQueue) Len() int {
     return pq.h.Len()
 }
 
-//  Remove a task from the queue with runtime O(log(n))
+//  Remove a task from the queue with runtime O(log(n)).
 func (pq *PriorityQueue) Dequeue() RegisteredTask {
     if pq.Len() <= 0 {
         panic("empty")
@@ -120,7 +124,9 @@ func (pq *PriorityQueue) Dequeue() RegisteredTask {
     return heap.Pop(pq.h).(RegisteredTask)
 }
 
-//  Add a task to the queue with runtime O(log(n))
+//  Add a task to the queue with runtime O(log(n)). The Task() method
+//  of task must satisfy the PrioritizedTask interface, or a runtime
+//  panic is thrown.
 func (pq *PriorityQueue) Enqueue(task RegisteredTask) {
     switch task.Task().(type) {
     case PrioritizedTask:
@@ -141,15 +147,15 @@ func (pq *PriorityQueue) SetKey(id int64, k float64) {
     heap.Push(pq.h, task)
 }
 
-//  A priority queue based on the "container/vector" package.
-//  Ideally, an array-based priority queue implementation should have
-//  fast dequeues and slow enqueues. I fear the vector.Vector class
-//  gives slow equeues and slow dequeues.
+//  A priority queue based on the "container/vector" package. This priority
+//  queue implementation has fast dequeues and slow enqueues. 
 type VectorPriorityQueue struct {
     head   int
     hmax   int
     v *vector.Vector
 }
+
+// Create a new VectorPriorityQueue.
 func NewVectorPriorityQueue() *VectorPriorityQueue {
     var vpq = new(VectorPriorityQueue)
     vpq.v = new(vector.Vector)
@@ -160,13 +166,9 @@ func NewVectorPriorityQueue() *VectorPriorityQueue {
 func (vpq *VectorPriorityQueue) Len() int {
     return vpq.v.Len() - vpq.head
 }
-type etypeStopIter struct {
-}
-func (e etypeStopIter) String() string {
-    return "STOPITER"
-}
 
-//  Linear time enqueue operation.
+//  Add a task to the priority queue in O(n) time. This is done with a
+//  O(log(n)) binary search and an insert operation.
 func (vpq *VectorPriorityQueue) Enqueue(task RegisteredTask) {
     switch task.Task().(type) {
     case PrioritizedTask:
@@ -183,7 +185,7 @@ func (vpq *VectorPriorityQueue) Enqueue(task RegisteredTask) {
     vpq.v.Insert(vpq.head+insertoffset, task)
 }
 
-//  Dequeue operation with (I believe) a constant amortized cost.
+//  Remove the task with the smallest key in O(1) amortized time.
 func (vpq *VectorPriorityQueue) Dequeue() RegisteredTask {
     var front = vpq.v.At(vpq.head).(RegisteredTask)
     vpq.head++
@@ -195,7 +197,8 @@ func (vpq *VectorPriorityQueue) Dequeue() RegisteredTask {
     return front
 }
 
-//  Linear time set key operation.
+//  Change the value of a task's key in O(n) time. This performs search,
+//  delete, and enqueue operations. Hence, this is not a fast method.
 func (vpq *VectorPriorityQueue) SetKey(id int64, k float64) {
     var (
         n    = vpq.Len()
@@ -216,8 +219,10 @@ func (vpq *VectorPriorityQueue) SetKey(id int64, k float64) {
 }
 
 
-//  An array based priority queue with a constant time dequeue and a
-//  linear time equeue.
+//  An array-based priority queue with a constant time dequeue and a
+//  linear time equeue. It should slightly outperform a
+//  VectorPriorityQueue, but will likely be removed from the library
+//  because it is requires more maintenance.
 type ArrayPriorityQueue struct {
     v          []RegisteredTask
     head, tail int

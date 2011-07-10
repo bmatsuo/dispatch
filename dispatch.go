@@ -15,7 +15,8 @@
 //  it runs simultaneously. It also uses a Queue interface, allowing for
 //  alternate queue implementations.
 //
-//  See github.com/bmatsuo/dispatch/queues for more about the Queue interface.
+//  See github.com/bmatsuo/dispatch/queues for more about the Queue
+//  interface and, a list of commonly used queues.
 //
 //  See github.com/bmatsuo/dispatch/examples for usage examples.
 package dispatch
@@ -26,7 +27,8 @@ import (
 )
 
 //  A Dispatch is an automated function dispatch queue with a limited
-//  number of concurrent gorountines.
+//  number of concurrent gorountines. The queue can be altered with the
+//  Dispatch methods Enqueue and SetKey (TODO add method Remove).
 type Dispatch struct {
     // The maximum number of goroutines can be changed while the queue is
     // processing.
@@ -34,7 +36,6 @@ type Dispatch struct {
 
     // Handle waiting when the limit of concurrent goroutines has been reached.
     waitingToRun bool
-    //nextWake     chan bool
     nextWait     *sync.WaitGroup
 
     // Handle waiting when function queue is empty.
@@ -58,27 +59,34 @@ type Dispatch struct {
     kill         chan bool
 }
 
-//  Create a new queue object with a specified limit on concurrency.
+//  Create a new Dispatch object with a specified limit on concurrency.
 func New(maxroutines int) *Dispatch {
     return NewCustom(maxroutines, queues.NewFIFO())
 }
+
+//  Create a new Dispatch object with a custom backend queue satisfying
+//  interface queues.Queue. It is not safe to allow non-Dispatch methods
+//  any access to the object queue. This can lead to race conditions with
+//  possible corruption of internal structures. So, it's considered a best
+//  practice to only pass NewCustom(...) newly created queues.
+//      fifoDispatch     := NewCustom(10, queues.NewFIFO())
+//      priorityDispatch := NewCustom(20, queues.NewPriorityQueue())
 func NewCustom(maxroutines int, queue queues.Queue) *Dispatch {
-    var rl = new(Dispatch)
-    rl.startLock = new(sync.Mutex)
-    rl.qLock     = new(sync.Mutex)
-    rl.pLock     = new(sync.Mutex)
-    rl.restart   = new(sync.WaitGroup)
-    rl.kill      = make(chan bool)
-    //rl.nextWake  = make(chan bool)
-    rl.nextWait  = new(sync.WaitGroup)
-    rl.queue     = queue
-    rl.MaxGo     = maxroutines
-    rl.idcount   = 0
-    return rl
+    var d = new(Dispatch)
+    d.startLock = new(sync.Mutex)
+    d.qLock     = new(sync.Mutex)
+    d.pLock     = new(sync.Mutex)
+    d.restart   = new(sync.WaitGroup)
+    d.kill      = make(chan bool)
+    d.nextWait  = new(sync.WaitGroup)
+    d.queue     = queue
+    d.MaxGo     = maxroutines
+    d.idcount   = 0
+    return d
 }
 
-//  Goroutines called from a Dispatch are given an int identifier unique
-//  to that routine.
+//  A simple task for use in a priority-less queue. See package
+//  github.com/bmatsuo/dispatch/queues
 type StdTask struct {
     F func(id int64)
 }
@@ -105,7 +113,9 @@ func (dtw dispatchTaskWrapper) Task() queues.Task {
     return dtw.t
 }
 
-//  Enqueue a task for execution as a goroutine.
+//  Enqueue a task for execution as a goroutine. The given queues.Task is
+//  given a unique id (int64) and stored in the Dispatch gq's backend
+//  queues.Queue object.
 func (gq *Dispatch) Enqueue(t queues.Task) int64 {
     // Wrap the function so it works with the goroutine limiting code.
     var f = t.Func()
@@ -164,7 +174,6 @@ func (gq *Dispatch) Stop() {
         gq.waitingToRun = false
         gq.nextWait.Done()
     }
-    //close(gq.nextWake)
 }
 
 //  Start the next task in the queue. It's assumed that the queue is non-
@@ -180,16 +189,6 @@ func (gq *Dispatch) next() {
             gq.nextWait.Add(1)
             gq.pLock.Unlock()
             gq.nextWait.Wait()
-            /*
-            var cont, ok =<-gq.nextWake
-            if !ok {
-                gq.nextWake = make(chan bool)
-                return
-            }
-            if !cont {
-                return
-            }
-            */
             continue
         }
         // Keep the books and reset wait time before unlocking.
@@ -209,7 +208,22 @@ func (gq *Dispatch) next() {
     }
 }
 
-//  Start executing goroutines. Don't stop until gq.Stop() is called.
+//  Start executing goroutines. Don't stop until gq.Stop() is called. This
+//  method will take control of the calling thread. But, it's safe to call
+//  in a goroutine.
+//      gq := dispatch.New()
+//      go gq.Start()
+//      wg := new(sync.WaitGroup)
+//      for i := 0 ; i < 1000 ; i++ {
+//          wg.Add(1)
+//          gq.Enqueue(&dispatch.StdTask{
+//              func(id int64) {
+//                  log.Printf("I'm alive %d", i)
+//                  wg.Done()
+//              } } )
+//      }
+//      wg.Wait()
+//      gq.Stop()
 func (gq *Dispatch) Start() {
     // Avoid multiple gq.Start() methods and avoid race conditions.
     gq.startLock.Lock()
@@ -228,12 +242,6 @@ func (gq *Dispatch) Start() {
             if !okKill {
                 gq.kill = make(chan bool)
             }
-        /*
-        case _, okWake :=<-gq.nextWake:
-            if !okWake {
-                gq.nextWake = make(chan bool)
-            }
-        */
         default:
             inited = true
         }

@@ -1,4 +1,4 @@
-*dispatch version 0.0_10*
+*dispatch version 0.1_02*
 
 Package dispatch provides goroutine dispatch and concurrency limiting
 

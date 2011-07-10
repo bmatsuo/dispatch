@@ -29,20 +29,29 @@ type RegisteredTask interface {
     Id()   int64
 }
 
-//  A Queue is a queue for RegisteredTasks, used by a Dispatch.
+//  A Queue is a queue for RegisteredTasks, used by a Dispatch. Queue
+//  objects can be priority queues or not, but they all must implement
+//  a method SetKey(...). For non-priority queues, that method should
+//  just return immediately.
+//
+//  To avoid race conditions, when Queue methods are called by a Dispatch,
+//  the Dispatch locks the queue and prevents any other methods from being
+//  called on it. This is something to think about when creating/choosing
+//  a Queue implementation.
 type Queue interface {
-    Enqueue(task RegisteredTask)  // Insert a DispatchTask
+    Enqueue(task RegisteredTask)  // Insert a task
     Dequeue() RegisteredTask      // Remove the next task.
-    Len() int                     // Number of items to be processed.
+    Len() int                     // Number of items waiting for processing.
     SetKey(int64, float64)        // Set a task's key (priority queues).
 }
 
-//  A naive First In First Out (FIFO) Queue.
+//  A First In First Out (FIFO) Queue implemented as a circular slice.
 type FIFO struct {
     head, tail  int
     length      int
     circ        []RegisteredTask
 }
+
 //  Create a new FIFO.
 func NewFIFO() *FIFO {
     var q = new(FIFO)
@@ -53,11 +62,11 @@ func NewFIFO() *FIFO {
     return q
 }
 
-//  See Queue.
 func (dq *FIFO) Len() int {
     return dq.length
 }
-//  See Queue.
+
+//  Add a task in O(1) amortized time.
 func (dq *FIFO) Enqueue(task RegisteredTask) {
     var n = len(dq.circ)
     if dq.length == len(dq.circ) {
@@ -76,7 +85,8 @@ func (dq *FIFO) Enqueue(task RegisteredTask) {
     dq.tail = (dq.tail+1)%n
     dq.length++
 }
-//  See Queue.
+
+//  Dequeue a task in O(1) time.
 func (dq *FIFO) Dequeue() RegisteredTask {
     if dq.length == 0 {
         panic("empty")
@@ -86,14 +96,17 @@ func (dq *FIFO) Dequeue() RegisteredTask {
     dq.length--
     return task
 }
+
 //  Does nothing. See Queue.
 func (dq *FIFO) SetKey(id int64, k float64) { }
 
-//  A naive Last In First Out (LIFO) Queue (also known as a stack).
+//  A Last In First Out (LIFO) Queue (also known as a stack) implemented
+//  with a slice.
 type LIFO struct {
     top    int
     stack   []RegisteredTask
 }
+
 //  Create a new LIFO.
 func NewLIFO() *LIFO {
     var q = new(LIFO)
@@ -102,11 +115,11 @@ func NewLIFO() *LIFO {
     return q
 }
 
-//  See Queue.
 func (dq *LIFO) Len() int {
     return dq.top
 }
-//  See Queue.
+
+//  Enqueue (push) a task on the LIFO in O(1) amortized time.
 func (dq *LIFO) Enqueue(task RegisteredTask) {
     var n = len(dq.stack)
     if dq.top == n {
@@ -117,7 +130,8 @@ func (dq *LIFO) Enqueue(task RegisteredTask) {
     dq.stack[dq.top] = task
     dq.top++
 }
-//  See Queue.
+
+//  Dequeue (pop) a task off the LIFO in O(1) time.
 func (dq *LIFO) Dequeue() RegisteredTask {
     if dq.top == 0 {
         panic("empty")
@@ -127,5 +141,6 @@ func (dq *LIFO) Dequeue() RegisteredTask {
     dq.stack[dq.top] = nil
     return task
 }
+
 //  Does nothing. See Queue.
 func (dq *LIFO) SetKey(id int64, k float64) { }
