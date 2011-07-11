@@ -4,11 +4,11 @@
 
 package main
 /*
- *  Filename:    godirs.go
+ *  Filename:    godu.go
  *  Author:      Bryan Matsuo <bmatsuo@soe.ucsc.edu>
  *  Created:     Tue Jul  5 22:13:49 PDT 2011
  *  Description: 
- *  Usage:       godirs [options] ARGUMENT ...
+ *  Usage:       godu [options] ARGUMENT ...
  */
 import (
     "os"
@@ -33,7 +33,7 @@ type Options struct {
 }
 var opt = Options{}
 func SetupFlags() *flag.FlagSet {
-    var fs = flag.NewFlagSet("godirs", flag.ExitOnError)
+    var fs = flag.NewFlagSet("godu", flag.ExitOnError)
     fs.BoolVar(&(opt.beClever), "c", true, "Use the clever Dispatch method.")
     fs.BoolVar(&(opt.verbose), "v", false, "Verbose program output.")
     return fs

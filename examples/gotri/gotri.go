@@ -112,7 +112,7 @@ type Options struct {
 }
 var opt = Options{}
 func SetupFlags() *flag.FlagSet {
-    var fs = flag.NewFlagSet("godirs", flag.ExitOnError)
+    var fs = flag.NewFlagSet("gotri", flag.ExitOnError)
     fs.IntVar(&(opt.numAthletes), "n", 15, "Number of athletes participating.")
     fs.IntVar(&(opt.numSwimmers), "k", 3, "Maximum simultaneous swimmers.")
     fs.IntVar(&(opt.maxbtime), "b", 5, "Max time for a athlete while biking.")

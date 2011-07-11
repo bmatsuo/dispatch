@@ -11,7 +11,7 @@ Godu is a simple clone of Unix du using a FIFO dispatch and filepath.Walk.
 
 Usage:
 
-    godirs [options] DIR
+    godu [options] DIR
 
 Arguments:
 

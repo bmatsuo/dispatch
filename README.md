@@ -34,7 +34,7 @@ Documentation
 Installation
 -------------
 
-Use goinstall to install godirs
+Use goinstall to install dispatch
 
     goinstall github.com/bmatsuo/dispatch
 
