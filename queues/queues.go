@@ -12,21 +12,21 @@
 //  Package queues defines the Queue interface used in package dispatch,
 //  and several Queue implementations.
 package queues
-import (
-)
+
+import ()
 
 //  A Task is the interface satisfied by objects passed to a Dispatch.
 type Task interface {
-    SetFunc(func (id int64))
-    Func() func (id int64)
-    Type() string                 // Used mostly for debugging
+    SetFunc(func(id int64))
+    Func() func(id int64)
+    Type() string // Used mostly for debugging
 }
 //  A Task given to a Dispatch is given a unique id and becomes a
 //  RegisteredTask.
 type RegisteredTask interface {
     Task() Task
-    Func() func (id int64)
-    Id()   int64
+    Func() func(id int64)
+    Id() int64
 }
 
 //  A Queue is a queue for RegisteredTasks, used by a Dispatch. Queue
@@ -39,17 +39,17 @@ type RegisteredTask interface {
 //  called on it. This is something to think about when creating/choosing
 //  a Queue implementation.
 type Queue interface {
-    Enqueue(task RegisteredTask)  // Insert a task
-    Dequeue() RegisteredTask      // Remove the next task.
-    Len() int                     // Number of items waiting for processing.
-    SetKey(int64, float64)        // Set a task's key (priority queues).
+    Enqueue(task RegisteredTask) // Insert a task
+    Dequeue() RegisteredTask     // Remove the next task.
+    Len() int                    // Number of items waiting for processing.
+    SetKey(int64, float64)       // Set a task's key (priority queues).
 }
 
 //  A First In First Out (FIFO) Queue implemented as a circular slice.
 type FIFO struct {
-    head, tail  int
-    length      int
-    circ        []RegisteredTask
+    head, tail int
+    length     int
+    circ       []RegisteredTask
 }
 
 //  Create a new FIFO.
@@ -73,16 +73,13 @@ func (dq *FIFO) Enqueue(task RegisteredTask) {
         // Copy the circular slice into a new slice with twice the length.
         var tmp = dq.circ
         dq.circ = make([]RegisteredTask, 2*n)
-        for i := 0 ; i < n ; i++ {
-            var j = (dq.head+i)%n
-            dq.circ[i] = tmp[j]
-            tmp[j] = nil
-        }
+        mid := copy(dq.circ, tmp[dq.head:])
+        end := copy(dq.circ[mid:], tmp[:dq.tail])
         dq.head = 0
-        dq.tail = n
+        dq.tail = mid + end // This should be equal to n.
     }
     dq.circ[dq.tail] = task
-    dq.tail = (dq.tail+1)%n
+    dq.tail = (dq.tail + 1) % n
     dq.length++
 }
 
@@ -92,19 +89,20 @@ func (dq *FIFO) Dequeue() RegisteredTask {
         panic("empty")
     }
     var task = dq.circ[dq.head]
-    dq.head = (dq.head+1)%dq.length
+    dq.circ[dq.head] = nil
+    dq.head = (dq.head + 1) % dq.length
     dq.length--
     return task
 }
 
 //  Does nothing. See Queue.
-func (dq *FIFO) SetKey(id int64, k float64) { }
+func (dq *FIFO) SetKey(id int64, k float64) {}
 
 //  A Last In First Out (LIFO) Queue (also known as a stack) implemented
 //  with a slice.
 type LIFO struct {
-    top    int
-    stack   []RegisteredTask
+    top   int
+    stack []RegisteredTask
 }
 
 //  Create a new LIFO.
@@ -143,4 +141,4 @@ func (dq *LIFO) Dequeue() RegisteredTask {
 }
 
 //  Does nothing. See Queue.
-func (dq *LIFO) SetKey(id int64, k float64) { }
+func (dq *LIFO) SetKey(id int64, k float64) {}
