@@ -89,7 +89,8 @@ func (dq *FIFO) Dequeue() RegisteredTask {
         panic("empty")
     }
     var task = dq.circ[dq.head]
-    dq.circ[dq.head] = nil
+    var zero RegisteredTask
+    dq.circ[dq.head] = zero
     dq.head = (dq.head + 1) % dq.length
     dq.length--
     return task
@@ -136,7 +137,8 @@ func (dq *LIFO) Dequeue() RegisteredTask {
     }
     dq.top--
     var task = dq.stack[dq.top]
-    dq.stack[dq.top] = nil
+    var zero RegisteredTask
+    dq.stack[dq.top] = zero
     return task
 }
 
