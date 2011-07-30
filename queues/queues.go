@@ -79,7 +79,7 @@ func (dq *FIFO) Enqueue(task RegisteredTask) {
         dq.tail = mid + end // This should be equal to n.
     }
     dq.circ[dq.tail] = task
-    dq.tail = (dq.tail + 1) % n
+    dq.tail = (dq.tail + 1) % len(dq.circ)
     dq.length++
 }
 
@@ -91,7 +91,7 @@ func (dq *FIFO) Dequeue() RegisteredTask {
     var task = dq.circ[dq.head]
     var zero RegisteredTask
     dq.circ[dq.head] = zero
-    dq.head = (dq.head + 1) % dq.length
+    dq.head = (dq.head + 1) % len(dq.circ)
     dq.length--
     return task
 }
