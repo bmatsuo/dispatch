@@ -54,6 +54,9 @@ type Dispatch struct {
     processing   int         // Number of QueueTasks running
     idcount      int64       // pid counter
 
+    // The longest the dispatch queue grew.
+    maxlength    int
+
     // Handle stopping of the Start() method.
     kill         chan bool
 }
@@ -81,6 +84,7 @@ func NewCustom(maxroutines int, queue queues.Queue) *Dispatch {
     d.queue     = queue
     d.MaxGo     = maxroutines
     d.idcount   = 0
+    d.maxlength = 0
     return d
 }
 
@@ -112,6 +116,12 @@ func (dtw dispatchTaskWrapper) Task() queues.Task {
     return dtw.t
 }
 
+func (gq *Dispatch) Len() int {
+    return gq.queue.Len()
+}
+func (gq *Dispatch) MaxLength() int {
+    return gq.maxlength
+}
 //  Enqueue a task for execution as a goroutine. The given queues.Task is
 //  given a unique id (int64) and stored in the Dispatch gq's backend
 //  queues.Queue object.
@@ -142,6 +152,9 @@ func (gq *Dispatch) Enqueue(t queues.Task) int64 {
     if gq.waitingOnQ {
         gq.waitingOnQ = false
         gq.restart.Done()
+    }
+    if gq.queue.Len() > gq.maxlength {
+        gq.maxlength = gq.queue.Len()
     }
     gq.qLock.Unlock()
 
