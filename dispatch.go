@@ -32,30 +32,34 @@ import (
 type Dispatch struct {
     // The maximum number of goroutines can be changed while the queue is
     // processing.
-    MaxGo int
+    MaxGo      int
+
+    // Handle waiting when the limit of concurrent goroutines has been reached.
+    waitingToRun bool
+    nextWait     *sync.WaitGroup
 
     // Handle waiting when function queue is empty.
-    waitingOnQ bool
-    restart    *sync.WaitGroup
+    waitingOnQ   bool
+    restart      *sync.WaitGroup
 
     // Manage the Start()'ing of a Dispatch, avoiding race conditions.
-    startLock *sync.Mutex
-    started   bool
+    startLock    *sync.Mutex
+    started      bool
 
     // Handle goroutine-safe queue operations.
-    qLock *sync.Mutex
-    queue queues.Queue
+    qLock        *sync.Mutex
+    queue        queues.Queue
 
     // Handle goroutine-safe limiting and identifier operations.
-    pTickets   chan bool
-    processing int   // Number of QueueTasks running
-    idcount    int64 // pid counter
+    pLock        *sync.Mutex
+    processing   int         // Number of QueueTasks running
+    idcount      int64       // pid counter
 
     // The longest the dispatch queue grew.
-    maxlength int
+    maxlength    int
 
     // Handle stopping of the Start() method.
-    kill chan bool
+    kill         chan bool
 }
 
 //  Create a new Dispatch object with a specified limit on concurrency.
@@ -73,17 +77,15 @@ func New(maxroutines int) *Dispatch {
 func NewCustom(maxroutines int, queue queues.Queue) *Dispatch {
     var d = new(Dispatch)
     d.startLock = new(sync.Mutex)
-    d.qLock = new(sync.Mutex)
-    d.restart = new(sync.WaitGroup)
-    d.kill = make(chan bool)
-    d.queue = queue
-    d.MaxGo = maxroutines
-    d.idcount = 0
+    d.qLock     = new(sync.Mutex)
+    d.pLock     = new(sync.Mutex)
+    d.restart   = new(sync.WaitGroup)
+    d.kill      = make(chan bool)
+    d.nextWait  = new(sync.WaitGroup)
+    d.queue     = queue
+    d.MaxGo     = maxroutines
+    d.idcount   = 0
     d.maxlength = 0
-    d.pTickets = make(chan bool, maxroutines)
-    for i := 0; i < maxroutines; i++ {
-        d.pTickets <- true
-    }
     return d
 }
 
@@ -135,15 +137,19 @@ func (gq *Dispatch) MaxLen() int {
 func (gq *Dispatch) Enqueue(t queues.Task) int64 {
     // Wrap the function so it works with the goroutine limiting code.
     var f = t.Func()
-    var dtFunc = func(id int64) {
+    var dtFunc = func (id int64) {
         // Run the given function.
         f(id)
 
-        // Return the processing ticket to the dispatch.
-        defer func() {
-            recover()
-        }()
-        gq.pTickets <- true
+        // Decrement the process counter.
+        gq.pLock.Lock()
+        //log.Printf("processing: %d, waiting: %v", gq.processing, gq.waitingToRun)
+        gq.processing--
+        if gq.waitingToRun {
+            gq.waitingToRun = false
+            gq.nextWait.Done()
+        }
+        gq.pLock.Unlock()
     }
     t.SetFunc(dtFunc)
 
@@ -185,7 +191,10 @@ func (gq *Dispatch) Stop() {
         gq.waitingOnQ = false
         gq.restart.Done()
     }
-    close(gq.pTickets)
+    if gq.waitingToRun {
+        gq.waitingToRun = false
+        gq.nextWait.Done()
+    }
 }
 
 //  Start the next task in the queue. It's assumed that the queue is non-
@@ -194,15 +203,26 @@ func (gq *Dispatch) Stop() {
 //  gq.Start(), which calls gq.next() exclusively.
 func (gq *Dispatch) next() {
     for true {
-        // Fetch the ticket of a previously completely routine.
-        <-gq.pTickets
+        // Attempt to start processing the file.
+        gq.pLock.Lock()
+        if gq.processing >= gq.MaxGo {
+            gq.waitingToRun = true
+            gq.nextWait.Add(1)
+            gq.pLock.Unlock()
+            gq.nextWait.Wait()
+            continue
+        }
+        // Keep the books and reset wait time before unlocking.
+        gq.processing++
+        gq.pLock.Unlock()
 
         // Get an element from the queue.
         gq.qLock.Lock()
         var wrapper = gq.queue.Dequeue().(queues.RegisteredTask)
         gq.qLock.Unlock()
 
-        // Begin processing asyncronously.
+        // Begin processing and asyncronously return.
+        //var task = taskelm.Value.(dispatchTaskWrapper)
         var task = wrapper.Func()
         go task(wrapper.Id())
         return
