@@ -51,7 +51,6 @@ type Dispatch struct {
     queue queues.Queue
 
     // Handle goroutine-safe limiting and identifier operations.
-    pLock      *sync.Mutex
     pTickets   chan bool
     processing int   // Number of QueueTasks running
     idcount    int64 // pid counter
@@ -79,7 +78,6 @@ func NewCustom(maxroutines int, queue queues.Queue) *Dispatch {
     var d = new(Dispatch)
     d.startLock = new(sync.Mutex)
     d.qLock = new(sync.Mutex)
-    d.pLock = new(sync.Mutex)
     d.restart = new(sync.WaitGroup)
     d.kill = make(chan bool)
     d.nextWait = new(sync.WaitGroup)
@@ -142,17 +140,10 @@ func (gq *Dispatch) Enqueue(t queues.Task) int64 {
         f(id)
 
         // Decrement the process counter.
+        defer func() {
+            recover()
+        }()
         gq.pTickets <- true
-        /*
-        gq.pLock.Lock()
-        //log.Printf("processing: %d, waiting: %v", gq.processing, gq.waitingToRun)
-        gq.processing--
-        if gq.waitingToRun {
-            gq.waitingToRun = false
-            gq.nextWait.Done()
-        }
-        gq.pLock.Unlock()
-        */
     }
     t.SetFunc(dtFunc)
 
@@ -194,10 +185,7 @@ func (gq *Dispatch) Stop() {
         gq.waitingOnQ = false
         gq.restart.Done()
     }
-    if gq.waitingToRun {
-        gq.waitingToRun = false
-        gq.nextWait.Done()
-    }
+    close(gq.pTickets)
 }
 
 //  Start the next task in the queue. It's assumed that the queue is non-
@@ -208,19 +196,6 @@ func (gq *Dispatch) next() {
     for true {
         // Attempt to start processing the file.
         <-gq.pTickets
-        /*
-        gq.pLock.Lock()
-        if gq.processing >= gq.MaxGo {
-            gq.waitingToRun = true
-            gq.nextWait.Add(1)
-            gq.pLock.Unlock()
-            gq.nextWait.Wait()
-            continue
-        }
-        // Keep the books and reset wait time before unlocking.
-        gq.processing++
-        gq.pLock.Unlock()
-        */
 
         // Get an element from the queue.
         gq.qLock.Lock()
@@ -279,7 +254,7 @@ func (gq *Dispatch) Start() {
         case die, ok := <-gq.kill:
             // If something came out of this channel, we must stop.
             if !ok {
-                // Recreate the channel on a closure.
+                // Recreate the channel.
                 gq.kill = make(chan bool)
                 return
             }
