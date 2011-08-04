@@ -34,10 +34,6 @@ type Dispatch struct {
     // processing.
     MaxGo int
 
-    // Handle waiting when the limit of concurrent goroutines has been reached.
-    waitingToRun bool
-    nextWait     *sync.WaitGroup
-
     // Handle waiting when function queue is empty.
     waitingOnQ bool
     restart    *sync.WaitGroup
@@ -80,7 +76,6 @@ func NewCustom(maxroutines int, queue queues.Queue) *Dispatch {
     d.qLock = new(sync.Mutex)
     d.restart = new(sync.WaitGroup)
     d.kill = make(chan bool)
-    d.nextWait = new(sync.WaitGroup)
     d.queue = queue
     d.MaxGo = maxroutines
     d.idcount = 0
@@ -98,6 +93,11 @@ type StdTask struct {
     F func(id int64)
 }
 
+func NewTask(f func(int64)) *StdTask {
+    t := new(StdTask)
+    t.F = f
+    return t
+}
 func (dt *StdTask) Type() string {
     return "StdTask"
 }
@@ -194,7 +194,7 @@ func (gq *Dispatch) Stop() {
 //  gq.Start(), which calls gq.next() exclusively.
 func (gq *Dispatch) next() {
     for true {
-        // Attempt to start processing the file.
+        // Fetch the ticket of a previously completely routine.
         <-gq.pTickets
 
         // Get an element from the queue.
@@ -202,8 +202,7 @@ func (gq *Dispatch) next() {
         var wrapper = gq.queue.Dequeue().(queues.RegisteredTask)
         gq.qLock.Unlock()
 
-        // Begin processing and asyncronously return.
-        //var task = taskelm.Value.(dispatchTaskWrapper)
+        // Begin processing asyncronously.
         var task = wrapper.Func()
         go task(wrapper.Id())
         return
