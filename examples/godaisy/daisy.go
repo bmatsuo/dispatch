@@ -117,7 +117,7 @@ func Example(n, k int) [][]int {
     sec := deltat / 1e9
     frac := (deltat % 1e9) / 1e6
 
-    fmt.Printf("Number of jobs %d; Maximum queue length %d; %d.%-3ds", n*k, d.MaxLength(), sec, frac)
+    fmt.Printf("Number of jobs %d; Maximum queue length %d; %d.%-3ds", n*k, d.MaxLen(), sec, frac)
     return out
 }
 
