@@ -237,11 +237,11 @@ func (gq *Dispatch) next() {
 //      wg := new(sync.WaitGroup)
 //      for i := 0 ; i < 1000 ; i++ {
 //          wg.Add(1)
-//          gq.Enqueue(&dispatch.StdTask{
+//          gq.Enqueue(dispatch.NewTask(
 //              func(id int64) {
 //                  log.Printf("I'm alive %d", i)
 //                  wg.Done()
-//              } } )
+//              } ) )
 //      }
 //      wg.Wait()
 //      gq.Stop()
