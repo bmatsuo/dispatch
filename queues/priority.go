@@ -26,42 +26,63 @@ type PTask struct {
     F func(int64)
     P float64
 }
+
+//  Returns "PTask" for the Task interface.
 func (pt *PTask) Type() string {
     return "PTask"
 }
+
+//  Function modifier for the Task interface.
 func (pt *PTask) SetFunc(f func(int64)) {
     pt.F = f
 }
+
+//  Function accessor for the Task interface.
 func (pt *PTask) Func() func(int64) {
     return pt.F
 }
+
+//  Key accessor for the PriorityTask interface.
 func (pt *PTask) Key() float64 {
     return pt.P
 }
+
+//  Key modifier for the PriorityTask interface.
 func (pt *PTask) SetKey(k float64) {
     pt.P = k
 }
 
+//  An array-based structure that satisfies the heap.Interface type.
 type pQueue struct {
     elements []RegisteredTask
 }
+
+//  Create a new heap queue.
 func newPQueue() *pQueue {
     var h = new(pQueue)
     h.elements = make([]RegisteredTask, 0, 5)
     return h
 }
+
+//  Access and assert the type of the PrioritizedTask at a given index.
 func (h *pQueue) GetPTask(i int) PrioritizedTask {
     if n := len(h.elements) ; i < 0 || i >= n {
         panic("badindex")
     }
     return h.elements[i].Task().(PrioritizedTask)
 }
+
+//  Returns the number of PrioritizedTasks in the heap.
 func (h *pQueue) Len() int {
     return len(h.elements)
 }
+
+//  Compare the keys of PrioritizedTasks at indices i and j.
 func (h *pQueue) Less(i, j int) bool {
     return h.GetPTask(i).Key() < h.GetPTask(j).Key()
 }
+
+//  Interchange the positions of PrioritizedTasks at indices i and j.
 func (h *pQueue) Swap(i, j int) {
     if n := len(h.elements) ; i < 0 || i >=n || j < 0 || j >= n {
         panic("badindex")
@@ -70,6 +91,8 @@ func (h *pQueue) Swap(i, j int) {
     h.elements[i] = h.elements[j]
     h.elements[j] = tmp
 }
+
+//  Append x, which must be a PrioritizedTask, to the end of the array.
 func (h *pQueue) Push(x interface{}) {
     switch x.(RegisteredTask).Task().(type) {
     case PrioritizedTask:
@@ -78,6 +101,8 @@ func (h *pQueue) Push(x interface{}) {
         panic("badtype")
     }
 }
+
+//  Remove the first PrioritizedTask from the array and return it.
 func (h *pQueue) Pop() interface{} {
     if len(h.elements) <= 0 {
         panic("empty")
@@ -86,6 +111,10 @@ func (h *pQueue) Pop() interface{} {
     h.elements = h.elements[1:]
     return head
 }
+
+//  Find a Task with a given id in the queue. Return it along with its
+//  index. Return a nil object and an index of -1 when the Task is not
+//  found.
 func (h *pQueue) FindId(id int64) (int, RegisteredTask) {
     for i, elm := range h.elements {
         if elm.Id() == id {
@@ -163,6 +192,8 @@ func NewVectorPriorityQueue() *VectorPriorityQueue {
     return vpq
 }
 
+
+//  Returns the number of PrioritizedTasks in the queue.
 func (vpq *VectorPriorityQueue) Len() int {
     return vpq.v.Len() - vpq.head
 }
@@ -236,7 +267,7 @@ func NewArrayPriorityQueue() *ArrayPriorityQueue {
     return apq
 }
 
-//  The number of items in the queue.
+//  The number of PrioritizedTasks in the queue.
 func (apq *ArrayPriorityQueue) Len() int {
     return apq.tail - apq.head
 }

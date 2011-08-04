@@ -62,6 +62,7 @@ func NewFIFO() *FIFO {
     return q
 }
 
+//  Returns the number of RegisteredTasks in the FIFO.
 func (dq *FIFO) Len() int {
     return dq.length
 }
@@ -114,6 +115,7 @@ func NewLIFO() *LIFO {
     return q
 }
 
+//  The number of RegisteredTasks in the LIFO.
 func (dq *LIFO) Len() int {
     return dq.top
 }
