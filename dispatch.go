@@ -139,7 +139,7 @@ func (gq *Dispatch) Enqueue(t queues.Task) int64 {
         // Run the given function.
         f(id)
 
-        // Decrement the process counter.
+        // Return the processing ticket to the dispatch.
         defer func() {
             recover()
         }()
