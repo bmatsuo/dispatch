@@ -243,20 +243,24 @@ func (apq *ArrayPriorityQueue) Len() int {
 
 //  Add a task to the queue with runtime O(n) (on average n/2 + log_2(n))
 func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
-    var key = task.Task().(PrioritizedTask).Key()
-    var n = apq.Len()
-    var insertoffset = sort.Search(
-            n,
-            func(i int)bool{
-                return apq.v[apq.head+i].Task().(PrioritizedTask).Key() >= key } )
+    key := task.Task().(PrioritizedTask).Key()
+    n := apq.Len()
+    // Perform a lg(n) time search for the proper insert index.
+    geq := func(i int)bool{
+        return apq.v[apq.head+i].Task().(PrioritizedTask).Key() >= key
+    }
+    var insertoffset = sort.Search(n, geq)
+
+    // Shift elements to make room for the insertion, if possible.
     if apq.tail != len(apq.v) {
-        for j := apq.tail ; j > apq.head+insertoffset ; j-- {
-            apq.v[j] = apq.v[j-1]
-        }
+        copy(apq.v[apq.head+insertoffset+1:],
+            apq.v[apq.head+insertoffset:apq.tail])
         apq.v[apq.head+insertoffset] = task
         apq.tail++
         return
     }
+
+    // Create a larger slice and insert the task during the copy.
     var newv = apq.v
     if apq.head <= len(apq.v)/2 {
         newv = make([]RegisteredTask, 2* len(apq.v))
@@ -264,8 +268,9 @@ func (apq *ArrayPriorityQueue) Enqueue(task RegisteredTask) {
     copy(newv, apq.v[apq.head:apq.head+insertoffset])
     newv[insertoffset] = task
     copy(newv[insertoffset+1:], apq.v[apq.head+insertoffset:apq.tail])
+    var zero RegisteredTask
     for i := apq.head ; i < apq.tail ; i++ {
-        apq.v[i] = nil
+        apq.v[i] = zero
     }
     apq.v = newv
     apq.head = 0
