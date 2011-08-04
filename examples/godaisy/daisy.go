@@ -103,6 +103,7 @@ func Example(n, k int) [][]int {
     wg := new(sync.WaitGroup)
     out := make([][]int, n)
 
+    t1 := time.Nanoseconds()
     go d.Start()
     wg.Add(n)
     for id := 0; id < n; id++ {
@@ -110,7 +111,13 @@ func Example(n, k int) [][]int {
     }
     wg.Wait()
     d.Stop()
+    t2 := time.Nanoseconds()
 
+    deltat := t2 - t1
+    sec := deltat / 1e9
+    frac := (deltat % 1e9) / 1e6
+
+    fmt.Printf("Number of jobs %d; Maximum queue length %d; %d.%-3ds", n*k, d.MaxLength(), sec, frac)
     return out
 }
 
