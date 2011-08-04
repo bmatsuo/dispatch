@@ -95,42 +95,57 @@ type StdTask struct {
     F func(id int64)
 }
 
+//  Return the pointer to a newly allocated StdTask.
 func NewTask(f func(int64)) *StdTask {
     t := new(StdTask)
     t.F = f
     return t
 }
+
+//  Returns "StdTask" for the queues.Task interface.
 func (dt *StdTask) Type() string {
     return "StdTask"
 }
+
+//  Function modifier method for the queues.Task interface.
 func (dt *StdTask) SetFunc(f func(id int64)) {
     dt.F = f
 }
+//  Function modifier method for the queues.Task interface.
 func (dt *StdTask) Func() func(id int64) {
     return dt.F
 }
 
+//  A simple struct combining a Task with a unique dispatch id.
 type dispatchTaskWrapper struct {
     id  int64
     t   queues.Task
 }
 
+//  Accessor for the contained Task's function.
 func (dtw dispatchTaskWrapper) Func() func(id int64) {
     return dtw.t.Func()
 }
+
+//  Accessor for the Task's unique dispatch id.
 func (dtw dispatchTaskWrapper) Id() int64 {
     return dtw.id
 }
+
+//  Accessor for the contained Task object itself.
 func (dtw dispatchTaskWrapper) Task() queues.Task {
     return dtw.t
 }
 
+//  Returns the current length of the Dispatch object's queue.
 func (gq *Dispatch) Len() int {
     return gq.queue.Len()
 }
+//  Returns the maximum length attained by the Dispatch object's queue.
 func (gq *Dispatch) MaxLen() int {
     return gq.maxlength
 }
+
 //  Enqueue a task for execution as a goroutine. The given queues.Task is
 //  given a unique id (int64) and stored in the Dispatch gq's backend
 //  queues.Queue object.
