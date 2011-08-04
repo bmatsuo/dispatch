@@ -87,7 +87,7 @@ func ExampleDaisyChain(length, id int, out [][]int, d *dispatch.Dispatch, cb *Ch
     c1.InsertToken()
     wg.Add(length)
     for i := 0; i < length; i++ {
-        d.Enqueue(&dispatch.StdTask{DaisyLink(ExampleDaisyFunc(id, i, &(out[id])), c1, c2, cb, wg)})
+        d.Enqueue(dispatch.NewTask(DaisyLink(ExampleDaisyFunc(id, i, &(out[id])), c1, c2, cb, wg)))
         c1 = c2
         c2 = cb.Retain()
         time.Sleep(opt.chaindelay)

@@ -88,7 +88,7 @@ func (w *Walker) VisitFile(path string, info *os.FileInfo) {
         w.wg.Done()
     }
     w.wg.Add(1)
-    w.gq.Enqueue(&dispatch.StdTask{f})
+    w.gq.Enqueue(dispatch.NewTask(f))
 }
 func (w *Walker) VisitDir(path string, f *os.FileInfo) bool {
     return true
